@@ -1,0 +1,7 @@
+name = "tensor-puzzles-lean"
+version = "0.1.0"
+defaultTargets = ["TensorPuzzles"]
+
+[[lean_lib]]
+name = "TensorPuzzles"
+

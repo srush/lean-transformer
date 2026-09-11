@@ -1,0 +1,14 @@
+landing_page = "Tensors"
+extra_css = ["site/tufte.css", "site/verso-tufte.css"]
+hide_commands = ["import", "set_option", "namespace", "end"]
+show_imports = false
+
+[metadata]
+title = "Minimal rational vectors"
+description = "Rational vectors, sequence models, and verified parallelism in Lean."
+
+[[targets]]
+module = "Tensors"
+
+[modules.Tensors]
+title = "Minimal rational vectors"

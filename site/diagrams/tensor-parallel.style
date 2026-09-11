@@ -1,0 +1,114 @@
+canvas {
+  width = 920
+  height = 500
+}
+
+theme {
+  color ink = rgba(0.16, 0.18, 0.20, 1)
+  color muted = rgba(0.38, 0.41, 0.44, 1)
+  color blue = rgba(0.87, 0.93, 0.97, 1)
+  color amber = rgba(0.98, 0.92, 0.79, 1)
+  color paper = rgba(0.97, 0.97, 0.95, 1)
+}
+
+forall Matrix x {
+  shape x.box = Rectangle {
+    center: (0, 0)
+    width: 112
+    height: 72
+    fillColor: theme.paper
+    strokeColor: theme.ink
+    strokeWidth: 1.4
+  }
+  shape x.text = Text {
+    center: x.box.center
+    string: x.label
+    fontFamily: "Georgia"
+    fontSize: "28px"
+    fillColor: theme.ink
+  }
+  layer x.text above x.box
+}
+
+forall Note x {
+  shape x.text = Text {
+    center: (0, 0)
+    string: x.label
+    fontFamily: "Georgia"
+    fontSize: "20px"
+    fillColor: theme.muted
+  }
+}
+
+forall Matrix a; Matrix b where Flow(a, b) {
+  shape connection = Line {
+    start: a.box.center + (64, 0)
+    end: b.box.center - (64, 0)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}
+
+forall Matrix `a1`; Matrix `a2`; Matrix `b1`; Matrix `b2`; Matrix `c1`; Matrix `c2`; Matrix `result`; Note `title`; Note `lane1`; Note `lane2`; Note `times1`; Note `times2`; Note `plus`; Note `formula`; Note `adim1`; Note `adim2`; Note `bdim1`; Note `bdim2`; Note `cdim1`; Note `cdim2`; Note `rdim` {
+  override `a1`.box.center = (-340, 55)
+  override `b1`.box.center = (-160, 55)
+  override `c1`.box.center = (30, 55)
+  override `a2`.box.center = (-340, -115)
+  override `b2`.box.center = (-160, -115)
+  override `c2`.box.center = (30, -115)
+  override `result`.box.center = (350, -30)
+  override `a1`.box.fillColor = theme.blue
+  override `b1`.box.fillColor = theme.blue
+  override `c1`.box.fillColor = theme.blue
+  override `a2`.box.fillColor = theme.amber
+  override `b2`.box.fillColor = theme.amber
+  override `c2`.box.fillColor = theme.amber
+  override `title`.text.center = (-105, 195)
+  override `title`.text.fontSize = "25px"
+  override `title`.text.fillColor = theme.ink
+  override `lane1`.text.center = (-285, 120)
+  override `lane2`.text.center = (-285, -50)
+  override `lane1`.text.fontFamily = "Arial"
+  override `lane2`.text.fontFamily = "Arial"
+  override `lane1`.text.fontSize = "14px"
+  override `lane2`.text.fontSize = "14px"
+  override `times1`.text.center = (-250, 55)
+  override `times2`.text.center = (-250, -115)
+  override `times1`.text.fontSize = "28px"
+  override `times2`.text.fontSize = "28px"
+  override `plus`.text.center = (210, -30)
+  override `plus`.text.fontSize = "32px"
+  override `plus`.text.fillColor = theme.ink
+  override `formula`.text.center = (0, -222)
+  override `formula`.text.fontSize = "26px"
+  override `formula`.text.fillColor = theme.ink
+  override `adim1`.text.center = (-340, 0)
+  override `bdim1`.text.center = (-160, 0)
+  override `cdim1`.text.center = (30, 0)
+  override `adim2`.text.center = (-340, -170)
+  override `bdim2`.text.center = (-160, -170)
+  override `cdim2`.text.center = (30, -170)
+  override `rdim`.text.center = (350, -85)
+  shape upper = Line {
+    start: (94, 55)
+    end: (188, -19)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape lower = Line {
+    start: (94, -115)
+    end: (188, -41)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape output = Line {
+    start: (232, -30)
+    end: (286, -30)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}
