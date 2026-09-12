@@ -68,6 +68,10 @@ def Matrix.col (a : Matrix n m) (j : Fin m) : Vector n :=
 def Matrix.matmul (a : Matrix n m) (b : Matrix m p) : Matrix n p :=
   fun i j => (a i).dot_product (b.col j)
 
+/-!
+![Row equivariance: swapping the rows before matmul gives the same result as swapping the output rows.](site/diagrams/row-equivariance.svg)
+-/
+
 theorem Matrix.matmul_row_equivariance (pick : Fin rows → Fin n)
     (a : Matrix n m) (b : Matrix m p) :
     Matrix.matmul (fun i j => a (pick i) j : Matrix rows m) b =
@@ -192,6 +196,8 @@ def loss (point_loss : Fin batch → Vector hidden → Rat)
 
 /-!
 # 4b. Exercise: data-parallel neural networks
+
+![Data parallelism: apply the same network to each batch half, sum point losses using their original batch indices, and add the two losses.](site/diagrams/data-parallel.svg)
 -/
 
 def data_parallel_loss (layers : List (NeuralLayer hidden))

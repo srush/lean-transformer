@@ -1,0 +1,51 @@
+canvas {
+  width = 920
+  height = 500
+}
+
+theme {
+  color ink = rgba(0.16, 0.18, 0.20, 1)
+  color muted = rgba(0.38, 0.41, 0.44, 1)
+  color blue = rgba(0.87, 0.93, 0.97, 1)
+  color amber = rgba(0.98, 0.92, 0.79, 1)
+  color paper = rgba(0.97, 0.97, 0.95, 1)
+}
+
+forall Matrix x {
+  shape x.box = Rectangle {
+    center: (0, 0)
+    width: 112
+    height: 72
+    fillColor: theme.paper
+    strokeColor: theme.ink
+    strokeWidth: 1.4
+  }
+  shape x.text = Text {
+    center: x.box.center
+    string: x.label
+    fontFamily: "Georgia"
+    fontSize: "28px"
+    fillColor: theme.ink
+  }
+  layer x.text above x.box
+}
+
+forall Note x {
+  shape x.text = Text {
+    center: (0, 0)
+    string: x.label
+    fontFamily: "Georgia"
+    fontSize: "20px"
+    fillColor: theme.muted
+  }
+}
+
+forall Matrix a; Matrix b where Flow(a, b) {
+  shape connection = Line {
+    start: a.box.center + (64, 0)
+    end: b.box.center - (64, 0)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

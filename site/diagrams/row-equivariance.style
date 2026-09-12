@@ -1,0 +1,78 @@
+forall Matrix `a1`; Matrix `a2`; Matrix `c1`; Matrix `c2`; Matrix `pa2`; Matrix `pa1`; Matrix `pc2`; Matrix `pc1`; Note `title`; Note `a`; Note `c`; Note `mul1`; Note `mul2`; Note `left`; Note `right`; Note `formula` {
+  override `a1`.box.center = (-245, 110)
+  override `a1`.box.fillColor = theme.blue
+  override `a1`.box.width = 160
+  override `a1`.box.height = 44
+  override `a2`.box.center = (-245, 66)
+  override `a2`.box.fillColor = theme.amber
+  override `a2`.box.width = 160
+  override `a2`.box.height = 44
+  override `c1`.box.center = (245, 110)
+  override `c1`.box.fillColor = theme.blue
+  override `c1`.box.width = 160
+  override `c1`.box.height = 44
+  override `c2`.box.center = (245, 66)
+  override `c2`.box.fillColor = theme.amber
+  override `c2`.box.width = 160
+  override `c2`.box.height = 44
+  override `pa2`.box.center = (-245, -90)
+  override `pa2`.box.fillColor = theme.amber
+  override `pa2`.box.width = 160
+  override `pa2`.box.height = 44
+  override `pa1`.box.center = (-245, -134)
+  override `pa1`.box.fillColor = theme.blue
+  override `pa1`.box.width = 160
+  override `pa1`.box.height = 44
+  override `pc2`.box.center = (245, -90)
+  override `pc2`.box.fillColor = theme.amber
+  override `pc2`.box.width = 160
+  override `pc2`.box.height = 44
+  override `pc1`.box.center = (245, -134)
+  override `pc1`.box.fillColor = theme.blue
+  override `pc1`.box.width = 160
+  override `pc1`.box.height = 44
+  override `title`.text.center = (0, 210)
+  override `title`.text.fontSize = "25px"
+  override `a`.text.center = (-245, 162)
+  override `a`.text.fontSize = "25px"
+  override `c`.text.center = (245, 162)
+  override `c`.text.fontSize = "25px"
+  override `mul1`.text.center = (0, 118)
+  override `mul1`.text.fontSize = "25px"
+  override `mul2`.text.center = (0, -82)
+  override `mul2`.text.fontSize = "25px"
+  override `left`.text.center = (-352, -12)
+  override `left`.text.fontSize = "20px"
+  override `right`.text.center = (352, -12)
+  override `right`.text.fontSize = "20px"
+  override `formula`.text.center = (0, -218)
+  override `formula`.text.fontSize = "26px"
+  shape arrow0 = Line {
+    start: (-150, 88)
+    end: (150, 88)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow1 = Line {
+    start: (-150, -112)
+    end: (150, -112)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow2 = Line {
+    start: (-245, 30)
+    end: (-245, -54)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow3 = Line {
+    start: (245, 30)
+    end: (245, -54)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

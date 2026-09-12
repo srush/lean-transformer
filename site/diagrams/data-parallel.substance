@@ -1,0 +1,38 @@
+Matrix x1
+Matrix f1
+Matrix l1
+Matrix x2
+Matrix f2
+Matrix l2
+Matrix total
+Note title
+Note device1
+Note device2
+Note dim1
+Note dim2
+Note net1
+Note net2
+Note loss1
+Note loss2
+Note plus
+Note scalar
+Note formula
+Label x1 "X₁"
+Label f1 "fθ"
+Label l1 "L₁"
+Label x2 "X₂"
+Label f2 "fθ"
+Label l2 "L₂"
+Label total "L"
+Label title "X = [X₁; X₂]     shared network parameters θ"
+Label device1 "DEVICE 1"
+Label device2 "DEVICE 2"
+Label dim1 "k × hidden"
+Label dim2 "k × hidden"
+Label net1 "neural network"
+Label net2 "neural network"
+Label loss1 "sum point_loss"
+Label loss2 "sum point_loss"
+Label plus "+"
+Label scalar "scalar"
+Label formula "loss(fθ(X)) = L₁ + L₂"

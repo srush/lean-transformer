@@ -1,0 +1,103 @@
+forall Matrix `x1`; Matrix `f1`; Matrix `l1`; Matrix `x2`; Matrix `f2`; Matrix `l2`; Matrix `total`; Note `title`; Note `device1`; Note `device2`; Note `dim1`; Note `dim2`; Note `net1`; Note `net2`; Note `loss1`; Note `loss2`; Note `plus`; Note `scalar`; Note `formula` {
+  override `x1`.box.center = (-340, 55)
+  override `x1`.box.fillColor = theme.blue
+  override `x1`.box.width = 112
+  override `x1`.box.height = 72
+  override `f1`.box.center = (-160, 55)
+  override `f1`.box.fillColor = theme.paper
+  override `f1`.box.width = 112
+  override `f1`.box.height = 72
+  override `l1`.box.center = (30, 55)
+  override `l1`.box.fillColor = theme.blue
+  override `l1`.box.width = 112
+  override `l1`.box.height = 72
+  override `x2`.box.center = (-340, -115)
+  override `x2`.box.fillColor = theme.amber
+  override `x2`.box.width = 112
+  override `x2`.box.height = 72
+  override `f2`.box.center = (-160, -115)
+  override `f2`.box.fillColor = theme.paper
+  override `f2`.box.width = 112
+  override `f2`.box.height = 72
+  override `l2`.box.center = (30, -115)
+  override `l2`.box.fillColor = theme.amber
+  override `l2`.box.width = 112
+  override `l2`.box.height = 72
+  override `total`.box.center = (350, -30)
+  override `total`.box.fillColor = theme.paper
+  override `total`.box.width = 112
+  override `total`.box.height = 72
+  override `title`.text.center = (0, 200)
+  override `title`.text.fontSize = "25px"
+  override `device1`.text.center = (-270, 125)
+  override `device1`.text.fontSize = "16px"
+  override `device2`.text.center = (-270, -45)
+  override `device2`.text.fontSize = "16px"
+  override `dim1`.text.center = (-340, 0)
+  override `dim1`.text.fontSize = "20px"
+  override `dim2`.text.center = (-340, -170)
+  override `dim2`.text.fontSize = "20px"
+  override `net1`.text.center = (-160, 0)
+  override `net1`.text.fontSize = "18px"
+  override `net2`.text.center = (-160, -170)
+  override `net2`.text.fontSize = "18px"
+  override `loss1`.text.center = (30, 0)
+  override `loss1`.text.fontSize = "18px"
+  override `loss2`.text.center = (30, -170)
+  override `loss2`.text.fontSize = "18px"
+  override `plus`.text.center = (210, -30)
+  override `plus`.text.fontSize = "32px"
+  override `scalar`.text.center = (350, -85)
+  override `scalar`.text.fontSize = "20px"
+  override `formula`.text.center = (0, -222)
+  override `formula`.text.fontSize = "26px"
+  shape arrow0 = Line {
+    start: (-276, 55)
+    end: (-224, 55)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow1 = Line {
+    start: (-96, 55)
+    end: (-34, 55)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow2 = Line {
+    start: (-276, -115)
+    end: (-224, -115)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow3 = Line {
+    start: (-96, -115)
+    end: (-34, -115)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow4 = Line {
+    start: (94, 55)
+    end: (188, -19)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow5 = Line {
+    start: (94, -115)
+    end: (188, -41)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow6 = Line {
+    start: (232, -30)
+    end: (286, -30)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}
