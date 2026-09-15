@@ -307,7 +307,11 @@ def select (selection : Fin m → Fin n) (a : Fin n → α) : Fin m → α :=
   fun i => a (selection i)
 
 -- Slice out a fixed-size group.
-def slice (start count : Nat) (h : start + count ≤ n) (xs : Fin n → α) : Fin count → α :=
+def slice
+  (start count : Nat)
+  -- Note that this takes a proof that the selection is in-bounds as an arg!
+  (h : start + count ≤ n)
+  (xs : Fin n → α) : Fin count → α :=
   select (fun i => ⟨i.val + start, by omega⟩) xs
 
 
@@ -526,15 +530,18 @@ def transformer_block (mixer : Mixer seq hidden)
 
 /-!
 
-One of the more surprising properties of the vanilla Transformer
-is that it is a set-based model, i.e. it is permutation equivariant
-in its input. Let's define first what that means generally.
+One of the more surprising properties of the vanilla (bidirectional) Transformer
+is that it is a set-to-set model, i.e. it is permutation equivariant in sequence length.
+Let's define first what that means formally.
 
 -/
+
+-- A permutation is a bijective map from {0..n-1} => {0..n-1}
 structure PositionPermutation (n : Nat) where
   index : Fin n → Fin n
   valid : (fori index).Perm (fori fun i : Fin n => i)
 
+-- Apply a permutation.
 def permute (π : PositionPermutation n) (a : Fin n → α) : Fin n → α :=
   select π.index a
 
