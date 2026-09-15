@@ -8,6 +8,7 @@ namespace Transformer
 /-!
 # Lean Verified Transformers
 
+
 This post explores writing formally verified ML code in Lean.
 Since the cost of proofs is declining rapidly and the amount of code generated
 is skyrocketing, the value of verified code seems likely to climb.
@@ -18,14 +19,17 @@ The goal of this post is to verify foundational properties of Transformers.
 These are critical properties that are used for
 parallelization and optimization, including tensor parallelism, data parallelism,
 batch invariance, permutation invariance, correctness of tiling, and locality
-of sparse attention models.
+of sparse attention models. Code is available at [srush/lean-transformer](https://github.com/srush/lean-transformer).
 The text, comments, and structure of the blog are all human-written;
 the proofs are all written by AI. Hopefully it can also serve as an advanced
 intro to Lean.
 
+
 This project is inspired by [TorchLean](https://arxiv.org/abs/2602.22631),
 [Verified Deep Learning with Lean 4](https://lean.brettkoonce.com/blueprint/),
 and the [Dex Programming Language](https://github.com/google-research/dex-lang).
+
+ - [srush](https://rush-nlp.com/)
 
 -/
 
