@@ -1,0 +1,34 @@
+Matrix u0
+Matrix s0
+Matrix u1
+Matrix s1
+Matrix u2
+Matrix s2
+Note initial
+Note decay0
+Note decay1
+Note rec
+Note masklabel
+Note mask
+Note parallel
+Note chunk
+Note local
+Note size
+Note readout
+Label u0 $U_{0}$
+Label s0 $S_{0}$
+Label u1 $U_{1}$
+Label s1 $S_{1}$
+Label u2 $U_{2}$
+Label s2 $S_{2}$
+Label initial $0$
+Label decay0 $\alpha$
+Label decay1 $\alpha$
+Label rec $S_t=\alpha S_{t-1}+U_t$
+Label masklabel $M$
+Label mask $\begin{bmatrix}1&0&0\\\alpha&1&0\\\alpha^2&\alpha&1\end{bmatrix}$
+Label parallel $O=(QK^\top\odot M)V$
+Label chunk $S_{\mathrm{out}}=\alpha^n S_{\mathrm{in}}$
+Label local $+\sum_{t=0}^{n-1}\alpha^{n-1-t}U_t$
+Label size "one chunk of n updates"
+Label readout $U_t=k_t v_t^\top\qquad o_s=q_s^\top S_s$

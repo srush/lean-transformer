@@ -1,0 +1,42 @@
+Matrix x0
+Matrix y0
+Matrix x1
+Matrix y1
+Matrix x2
+Matrix y2
+Matrix x3
+Matrix y3
+Matrix xs0
+Matrix ys0
+Matrix xs1
+Matrix ys1
+Matrix xs2
+Matrix ys2
+Note fn
+Note fn2
+Note selectL
+Note selectR
+Note sizes
+Note indices
+Note eq
+Label x0 $x_{0}$
+Label y0 $y_{0}$
+Label x1 $x_{1}$
+Label y1 $y_{1}$
+Label x2 $x_{2}$
+Label y2 $y_{2}$
+Label x3 $x_{3}$
+Label y3 $y_{3}$
+Label xs0 $x_{2}$
+Label ys0 $y_{2}$
+Label xs1 $x_{0}$
+Label ys1 $y_{0}$
+Label xs2 $x_{2}$
+Label ys2 $y_{2}$
+Label fn $f$
+Label fn2 $f$
+Label selectL $\operatorname{select}\ p$
+Label selectR $\operatorname{select}\ p$
+Label sizes $p : \operatorname{Fin}\,3 \to \operatorname{Fin}\,4$
+Label indices $p = [2,0,2]$
+Label eq $f(\operatorname{select}\ p\ x) = \operatorname{select}\ p\ (f(x))$

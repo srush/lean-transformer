@@ -20,21 +20,29 @@ forall Matrix x {
     strokeColor: theme.ink
     strokeWidth: 1.4
   }
-  shape x.text = Text {
+  shape x.text = Equation {
     center: x.box.center
     string: x.label
-    fontFamily: "Georgia"
     fontSize: "28px"
     fillColor: theme.ink
   }
   layer x.text above x.box
 }
 
-forall Note x {
+forall Note x where x has text label {
   shape x.text = Text {
     center: (0, 0)
     string: x.label
     fontFamily: "Georgia"
+    fontSize: "20px"
+    fillColor: theme.muted
+  }
+}
+
+forall Note x where x has math label {
+  shape x.text = Equation {
+    center: (0, 0)
+    string: x.label
     fontSize: "20px"
     fillColor: theme.muted
   }

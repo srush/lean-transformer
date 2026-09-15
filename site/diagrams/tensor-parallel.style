@@ -1,4 +1,4 @@
-forall Matrix `a1`; Matrix `a2`; Matrix `b1`; Matrix `b2`; Matrix `c1`; Matrix `c2`; Matrix `result`; Note `title`; Note `lane1`; Note `lane2`; Note `times1`; Note `times2`; Note `plus`; Note `formula`; Note `adim1`; Note `adim2`; Note `bdim1`; Note `bdim2`; Note `cdim1`; Note `cdim2`; Note `rdim` {
+forall Matrix `a1`; Matrix `a2`; Matrix `b1`; Matrix `b2`; Matrix `c1`; Matrix `c2`; Matrix `result`; Note `lane1`; Note `lane2`; Note `times1`; Note `times2`; Note `plus`; Note `formula`; Note `adim1`; Note `adim2`; Note `bdim1`; Note `bdim2`; Note `cdim1`; Note `cdim2`; Note `rdim` {
   override `a1`.box.center = (-340, 55)
   override `b1`.box.center = (-160, 55)
   override `c1`.box.center = (30, 55)
@@ -12,9 +12,6 @@ forall Matrix `a1`; Matrix `a2`; Matrix `b1`; Matrix `b2`; Matrix `c1`; Matrix `
   override `a2`.box.fillColor = theme.amber
   override `b2`.box.fillColor = theme.amber
   override `c2`.box.fillColor = theme.amber
-  override `title`.text.center = (-105, 195)
-  override `title`.text.fontSize = "25px"
-  override `title`.text.fillColor = theme.ink
   override `lane1`.text.center = (-285, 120)
   override `lane2`.text.center = (-285, -50)
   override `lane1`.text.fontFamily = "Arial"

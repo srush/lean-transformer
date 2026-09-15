@@ -1,8 +1,10 @@
 # Penrose diagrams
 
-The tensor-parallel, row-equivariance, and data-parallel SVGs are generated
+The tensor-parallel, row-equivariance, data-parallel, equivariance-invariance,
+batch-invariance, selection-equivariance, region-invariance, flash-attention,
+ssm, and chunkwise-ssm SVGs are generated
 from their matching `.domain`, `.substance`, and `.style` files using Penrose
-3.3.0. All three use `common.style` for typography, colors, boxes, and arrows.
+3.3.0. All diagrams use `common.style` for typography, colors, boxes, and arrows.
 The PNGs are previews of the SVGs.
 
 The style uses serif mathematical labels, muted blue and amber for matching
@@ -17,7 +19,13 @@ pnpm render
 ```
 
 To render just one diagram, run `pnpm render row-equivariance` (or
-`tensor-parallel` / `data-parallel`).
+`tensor-parallel`, `data-parallel`, `equivariance-invariance`, `batch-invariance`,
+`selection-equivariance`, `region-invariance`, `flash-attention`, `ssm`, or `chunkwise-ssm`).
+
+Mathematical labels use LaTeX, for example `Label xb $x_b$`. The shared Style
+renders them with Penrose's `Equation` shape (MathJax SVG), providing math
+italics and subscripts without depending on locally installed fonts. Prose
+labels remain quoted strings rendered with `Text`.
 
 The renderer uses installed Google Chrome on macOS. Set `CHROME_PATH` to use
 another Chromium executable. Generated images are checked in, so the Lean/Verso

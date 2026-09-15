@@ -1,0 +1,36 @@
+Matrix x0
+Matrix xb
+Matrix xn
+Matrix y0
+Matrix yb
+Matrix yn
+Matrix net
+Matrix single
+Matrix alone
+Matrix net1
+Note batch
+Note out
+Note shared
+Note pick
+Note pickout
+Note one
+Note zero
+Note formula
+Label x0 $x_{0}$
+Label xb $x_{b}$
+Label xn $\cdots$
+Label y0 $y_{0}$
+Label yb $y_{b}$
+Label yn $\cdots$
+Label net $f_{\theta}$
+Label single $x_{b}$
+Label alone $y_{b}$
+Label net1 $f_{\theta}$
+Label batch $\text{batch size } n$
+Label out "full-batch output"
+Label shared "selection-equivariant network"
+Label pick $\operatorname{select}\ b$
+Label pickout $\operatorname{select}\ b$
+Label one "batch size 1"
+Label zero "output at index 0"
+Label formula $\ell(\operatorname{nn}(\operatorname{select}\ b\ X)\ 0) = \ell(\operatorname{nn}(X)\ b)$

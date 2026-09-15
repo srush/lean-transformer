@@ -9,3 +9,10 @@
   These preserve the article typography while leaving Lean's interactive code intact.
 
 Run `make docs` from the project root after editing either stylesheet.
+
+For automatic rebuilds and browser refresh, run `python3 watch.py --open` from
+the project root. The preview uses port 8001 so it can run alongside the old
+server on port 8000. Open the new preview URL once; subsequent successful builds
+refresh that page automatically, preserving its URL fragment. Lean errors are
+printed in the terminal and do not trigger a refresh. Stop with Ctrl-C.
+Use `--port 8002` or `--lake /path/to/lake` to override the defaults.

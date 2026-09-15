@@ -1,0 +1,100 @@
+forall Matrix `x0`; Matrix `xb`; Matrix `xn`; Matrix `y0`; Matrix `yb`; Matrix `yn`; Matrix `net`; Matrix `single`; Matrix `alone`; Matrix `net1`; Note `batch`; Note `out`; Note `shared`; Note `pick`; Note `pickout`; Note `one`; Note `zero`; Note `formula` {
+  override `x0`.box.center = (-290, 134)
+  override `x0`.box.fillColor = theme.paper
+  override `x0`.box.width = 160
+  override `x0`.box.height = 42
+  override `xb`.box.center = (-290, 92)
+  override `xb`.box.fillColor = theme.blue
+  override `xb`.box.width = 160
+  override `xb`.box.height = 42
+  override `xn`.box.center = (-290, 50)
+  override `xn`.box.fillColor = theme.paper
+  override `xn`.box.width = 160
+  override `xn`.box.height = 42
+  override `y0`.box.center = (290, 134)
+  override `y0`.box.fillColor = theme.paper
+  override `y0`.box.width = 160
+  override `y0`.box.height = 42
+  override `yb`.box.center = (290, 92)
+  override `yb`.box.fillColor = theme.blue
+  override `yb`.box.width = 160
+  override `yb`.box.height = 42
+  override `yn`.box.center = (290, 50)
+  override `yn`.box.fillColor = theme.paper
+  override `yn`.box.width = 160
+  override `yn`.box.height = 42
+  override `net`.box.center = (0, 92)
+  override `net`.box.fillColor = theme.paper
+  override `net`.box.width = 120
+  override `net`.box.height = 76
+  override `single`.box.center = (-290, -120)
+  override `single`.box.fillColor = theme.blue
+  override `single`.box.width = 160
+  override `single`.box.height = 56
+  override `alone`.box.center = (290, -120)
+  override `alone`.box.fillColor = theme.blue
+  override `alone`.box.width = 160
+  override `alone`.box.height = 56
+  override `net1`.box.center = (0, -120)
+  override `net1`.box.fillColor = theme.paper
+  override `net1`.box.width = 120
+  override `net1`.box.height = 76
+  override `batch`.text.center = (-290, 178)
+  override `batch`.text.fontSize = "20px"
+  override `out`.text.center = (290, 178)
+  override `out`.text.fontSize = "20px"
+  override `shared`.text.center = (0, 162)
+  override `shared`.text.fontSize = "19px"
+  override `pick`.text.center = (-360, -17)
+  override `pick`.text.fontSize = "20px"
+  override `pickout`.text.center = (360, -17)
+  override `pickout`.text.fontSize = "20px"
+  override `one`.text.center = (-290, -180)
+  override `one`.text.fontSize = "20px"
+  override `zero`.text.center = (290, -180)
+  override `zero`.text.fontSize = "20px"
+  override `formula`.text.center = (0, -224)
+  override `formula`.text.fontSize = "25px"
+  shape arrow0 = Line {
+    start: (-198, 92)
+    end: (-73, 92)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow1 = Line {
+    start: (73, 92)
+    end: (198, 92)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow2 = Line {
+    start: (-198, -120)
+    end: (-73, -120)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow3 = Line {
+    start: (73, -120)
+    end: (198, -120)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow4 = Line {
+    start: (-290, 18)
+    end: (-290, -81)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow5 = Line {
+    start: (290, 18)
+    end: (290, -81)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

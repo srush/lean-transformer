@@ -1,0 +1,26 @@
+Matrix kv0
+Matrix acc0
+Matrix kv1
+Matrix acc1
+Matrix kv2
+Matrix acc2
+Matrix output
+Note query
+Note sizes
+Note initial
+Note addz
+Note addu
+Note norm
+Label kv0 $K_{0},\ V_{0}$
+Label acc0 $Z_{1},\ U_{1}$
+Label kv1 $K_{1},\ V_{1}$
+Label acc1 $Z_{2},\ U_{2}$
+Label kv2 $K_{2},\ V_{2}$
+Label acc2 $Z_{3},\ U_{3}$
+Label output $o_s=U_3/Z_3$
+Label query $r_t=1+\operatorname{relu}(q_s^\top k_t)$
+Label sizes $\text{each tile: }n\text{ positions}$
+Label initial $0,\,0$
+Label addz $Z_{c+1}=Z_c+\sum_{t\in\mathrm{tile}\ c}r_t$
+Label addu $U_{c+1}=U_c+\sum_{t\in\mathrm{tile}\ c}r_t v_t$
+Label norm "normalize once"

@@ -5,9 +5,16 @@ import { chromium } from "playwright";
 
 const root = new URL("./", import.meta.url);
 const descriptions = {
+  "chunkwise-ssm": "Equal-size chunks pass a matrix carry from left to right. Each chunk combines its decayed incoming carry with weighted local updates. A partial chunk gives every position's state and query readout, identical to the recurrent SSM.",
+  "flash-attention": "For one query, process equal-size key/value tiles while carrying a scalar weight sum Z and a vector weighted sum U. Normalize U by Z only after all tiles, exactly matching the softmax-like attention used here.",
+  "ssm": "The same decayed SSM can be evaluated recurrently, as masked linear attention, or in equal-size chunks. The mask is lower triangular with powers of alpha; each chunk combines a decayed incoming state with its weighted local updates.",
+  "selection-equivariance": "The selection p = [2, 0, 2] reorders, repeats, and selects three positions from four. Applying the same selection-equivariant function before or after selection gives identical outputs.",
+  "region-invariance": "Two sequences agree inside the radius-one window around position s, but differ outside it. A region-invariant function gives the same output at s; outputs at other positions need not agree.",
   "tensor-parallel": "Split A by columns and B by rows; compute the two matmuls independently, then add their results.",
   "row-equivariance": "Swapping the rows of A before multiplying by B gives the same result as swapping the rows of AB. Blue and amber rows retain their identities.",
-  "data-parallel": "Split a batch into X1 and X2. Apply the same neural network to each half, sum point losses with their original batch indices, then add the two scalar losses. This equals the full-batch loss."
+  "data-parallel": "Split a batch into X1 and X2. Apply the same neural network to each half, sum point losses with their original batch indices, then add the two scalar losses. This equals the full-batch loss.",
+  "equivariance-invariance": "Equivariance: transforming the input by T transforms the output by S. Invariance: transforming the input leaves the output unchanged. Both diagrams commute.",
+  "batch-invariance": "Select example b before or after applying the same selection-equivariant network. Processing the example alone at batch index zero gives the same output as its original row in the full batch."
 };
 const names = process.argv.slice(2);
 if (!names.length) names.push(...Object.keys(descriptions));
@@ -43,10 +50,17 @@ try {
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", description);
     document.body.append(svg);
+    await document.fonts.ready;
+    const bounds = svg.getBBox();
+    const width = bounds.width + 40;
+    const height = bounds.height + 40;
+    svg.setAttribute("viewBox", `${bounds.x - 20} ${bounds.y - 20} ${width} ${height}`);
+    svg.setAttribute("width", "920");
+    svg.setAttribute("height", String(920 * height / width));
     return svg.outerHTML;
   }, {trio, description: descriptions[name]});
   await writeFile(new URL(`${name}.svg`, root), svg + "\n");
-  await page.screenshot({ path: fileURLToPath(new URL(`${name}.png`, root)) });
+  await page.locator('svg').first().screenshot({ path: fileURLToPath(new URL(`${name}.png`, root)) });
   await page.close();
   console.log(`Rendered ${name}.svg with Penrose 3.3.0`);
   }

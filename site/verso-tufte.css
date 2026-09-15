@@ -30,7 +30,8 @@ body { height: auto; overflow: auto; }
 }
 /* A single-module article needs no library navigation sidebar. */
 .sidebar, .sidebar-toggle, .hamburger, .sidebar-overlay { display: none !important; }
-.title-bar { padding: 1.5rem 0 0; border: 0; }
+/* The article's first heading is the title; omit the duplicate title bar. */
+.title-bar { display: none; }
 .breadcrumbs { font-family: var(--verso-text-font-family); font-size: 1rem; }
 .code-content { overflow: visible; padding: 0; }
 .code-content > .verso-text.mod-doc {
@@ -42,6 +43,18 @@ body { height: auto; overflow: auto; }
   width: 100%;
   line-height: 1.5;
   margin: 1.4rem 0;
+}
+.code-content .verso-text img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+}
+.code-content .verso-text figure {
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 .code-content > .verso-text.mod-doc h1 {
   font-weight: 400;
@@ -92,17 +105,19 @@ body { height: auto; overflow: auto; }
   text-shadow: none;
 }
 .page-toc {
-  position: fixed;
-  top: 4rem;
-  left: calc(50% + 30rem);
-  width: 15rem;
-  max-height: calc(100vh - 8rem);
+  position: static;
+  display: block;
+  width: auto;
+  max-height: none;
+  margin: 2rem 0 3rem;
   border: 0;
   padding: 0;
-  font-size: 1rem;
+  font-size: 1.2rem;
 }
+.page-toc-title { font-weight: normal; font-size: 1.4rem; margin-bottom: .6rem; }
+.page-toc li:not(.toc-level-1) { display: none; }
+.page-toc li { margin: .3rem 0; }
 .page-toc ul { width: auto; font-size: inherit; }
-@media (max-width: 1450px) { .page-toc { display: none; } }
 @media (max-width: 768px) {
   body { width: 100%; max-width: 100%; padding: 0 1.2rem 4rem; }
   .main-area, .code-content { margin: 0; padding: 0; }

@@ -1,0 +1,98 @@
+forall Matrix `kv0`; Matrix `acc0`; Matrix `kv1`; Matrix `acc1`; Matrix `kv2`; Matrix `acc2`; Matrix `output`; Note `query`; Note `sizes`; Note `initial`; Note `addz`; Note `addu`; Note `norm` {
+  override `kv0`.box.center = (-260, 105)
+  override `kv0`.box.width = 170
+  override `kv0`.box.height = 64
+  override `kv0`.box.fillColor = theme.blue
+  override `kv0`.text.fontSize = "26px"
+  override `acc0`.box.center = (-260, -20)
+  override `acc0`.box.width = 170
+  override `acc0`.box.height = 60
+  override `acc0`.box.fillColor = theme.paper
+  override `acc0`.text.fontSize = "26px"
+  override `kv1`.box.center = (0, 105)
+  override `kv1`.box.width = 170
+  override `kv1`.box.height = 64
+  override `kv1`.box.fillColor = theme.amber
+  override `kv1`.text.fontSize = "26px"
+  override `acc1`.box.center = (0, -20)
+  override `acc1`.box.width = 170
+  override `acc1`.box.height = 60
+  override `acc1`.box.fillColor = theme.paper
+  override `acc1`.text.fontSize = "26px"
+  override `kv2`.box.center = (260, 105)
+  override `kv2`.box.width = 170
+  override `kv2`.box.height = 64
+  override `kv2`.box.fillColor = theme.blue
+  override `kv2`.text.fontSize = "26px"
+  override `acc2`.box.center = (260, -20)
+  override `acc2`.box.width = 170
+  override `acc2`.box.height = 60
+  override `acc2`.box.fillColor = theme.paper
+  override `acc2`.text.fontSize = "26px"
+  override `output`.box.center = (260, -165)
+  override `output`.box.width = 188
+  override `output`.box.height = 60
+  override `output`.box.fillColor = theme.blue
+  override `output`.text.fontSize = "25px"
+  override `query`.text.center = (0, 186)
+  override `query`.text.fontSize = "25px"
+  override `sizes`.text.center = (0, 150)
+  override `sizes`.text.fontSize = "18px"
+  override `initial`.text.center = (-415, -20)
+  override `initial`.text.fontSize = "22px"
+  override `addz`.text.center = (-145, -112)
+  override `addz`.text.fontSize = "23px"
+  override `addu`.text.center = (-145, -188)
+  override `addu`.text.fontSize = "23px"
+  override `norm`.text.center = (260, -217)
+  override `norm`.text.fontSize = "19px"
+  shape line0 = Line {
+    start: (-260, 62)
+    end: (-260, 20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line1 = Line {
+    start: (0, 62)
+    end: (0, 20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line2 = Line {
+    start: (260, 62)
+    end: (260, 20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line3 = Line {
+    start: (-390, -20)
+    end: (-356, -20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line4 = Line {
+    start: (-163, -20)
+    end: (-96, -20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line5 = Line {
+    start: (97, -20)
+    end: (164, -20)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line6 = Line {
+    start: (260, -63)
+    end: (260, -122)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

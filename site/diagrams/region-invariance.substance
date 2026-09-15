@@ -1,0 +1,48 @@
+Matrix r0c0
+Matrix r0c1
+Matrix r0c2
+Matrix r0c3
+Matrix r0c4
+Matrix r0c5
+Matrix r0c6
+Matrix r1c0
+Matrix r1c1
+Matrix r1c2
+Matrix r1c3
+Matrix r1c4
+Matrix r1c5
+Matrix r1c6
+Matrix out0
+Matrix out1
+Note window
+Note x
+Note other
+Note center
+Note fa
+Note fb
+Note outside
+Note eq
+Label r0c0 $a$
+Label r0c1 $b$
+Label r0c2 $u$
+Label r0c3 $v$
+Label r0c4 $w$
+Label r0c5 $c$
+Label r0c6 $d$
+Label r1c0 $a'$
+Label r1c1 $b'$
+Label r1c2 $u$
+Label r1c3 $v$
+Label r1c4 $w$
+Label r1c5 $c'$
+Label r1c6 $d'$
+Label out0 $y_s$
+Label out1 $y_s$
+Label window $\text{window around }s\quad(r=1)$
+Label x $x$
+Label other $x'$
+Label center $s$
+Label fa $f(\cdot)_s$
+Label fb $f(\cdot)_s$
+Label outside "Outside values may change; other outputs may change too."
+Label eq $\bigl(\forall t,\ |t-s|\le r \Rightarrow x_t=x'_t\bigr)\ \Rightarrow\ f(x)_s=f(x')_s$

@@ -1,6 +1,6 @@
 LAKE ?= lake
 
-.PHONY: check docs serve
+.PHONY: check docs serve watch
 check:
 	$(LAKE) build
 
@@ -11,3 +11,6 @@ docs:
 
 serve: docs
 	python3 -m http.server 8000 --bind 127.0.0.1 --directory .lake/build/literate-html
+
+watch:
+	python3 watch.py --lake $(LAKE)

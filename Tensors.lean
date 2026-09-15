@@ -1,131 +1,426 @@
 import Std
-import MatrixSimps
 
 set_option doc.verso true
 
 namespace TensorPuzzles
 
-attribute [local simp] Rat.add_zero Rat.zero_add
 
 /-!
-# Rational vectors: a small verified model
+# Lean for Transformers: Invariants
+
+This post explores writing formally verified ML code in Lean.
+Since the cost of proofs is declining rapidly and the amount of code generated is skyrocketing,
+the value of verified code seems likely to climb.
+While understanding proofs remains challenging, collaborating with AI to get proofs of easy to understand
+properties seems like a natural middle ground.
+
+The goal of this post is to verify foundational properties of Transformers.
+These are crtical properties that are used for
+parallelization and optimization, including tensor parallelism, data parallelism,
+batch invariance, permutation invariance, correctness of tiling, and locality of sparse attention models.
+The text, comments, and structure of the blog are all-human written;
+the proofs are all written by AI. Hopefully it can also serve as an advanced intro to Lean.
+
+This project is inspired by [TorchLean](https://arxiv.org/abs/2602.22631), [Verified Deep Learning with Lean 4](https://lean.brettkoonce.com/blueprint/), and the [Dex Programming Language](https://github.com/google-research/dex-lang)
+
 -/
 
 /-!
-# 1. Vectors and pointwise arithmetic
+
+# Invariance and Equivariance
+
+Different neural network architectures retain different properties of their input.
+We generally classify these properties in terms of equivariance and invariance.
+These allow researchers to reason about what they can learn, and
+implementers to optimize computation while maintaining equivalence.
+Our goal will be to prove equivariances and invariances for specific architectures.
+
+Notationally, ML definitions often assume functions work on different input shapes, e.g. batch sizes.
+For this reason our Lean definition will be a bit complex to allow for functions that are polymorphic over the shape.
+
+![Equivariance transforms the output along with the input; invariance leaves the output unchanged.](site/diagrams/equivariance-invariance.svg)
 -/
+
+def Equivariant
+    -- Arguments with { } are implicit
+    {Shape : Type u}
+    {Input : Shape → Type v} {Output : Shape → Type w}
+    -- Arguments with ( ) are explicit
+    (f : {shape : Shape} → Input shape → Output shape)
+    {source target : Shape}
+    (T : Input source → Input target)
+    (S : Output source → Output target)
+    -- : gives the return type. Here it is a property.
+    : Prop :=
+  ∀ x, f (T x) = S (f x)
+
+def Invariant
+    {Shape : Type u}
+    {Input : Shape → Type v} {Output : Type w}
+    (f : {shape : Shape} → Input shape → Output)
+    {source target : Shape}
+    (T : Input source → Input target) : Prop :=
+  ∀ x, f (T x) = f x
+
+/-!
+# Vectors, Matrices, and Neural Networks
+
+To define core invariances of a Transformer, we will first
+build a simple neural network library in Lean.
+
+Here is `relu` which takes in a number and returns its non-negative part.
+Along with the definition, we can prove it does what we claim.
+
+-/
+
+def relu (z : Rat) : Rat := max z 0
+
+theorem relu_non_negative
+   -- For all z
+   (z : Rat) :
+   -- relu is ≥ 0
+   relu z ≥ 0
+   := by
+   -- Do a short (grind) search
+   grind [relu]
+/-!
+
+
+Following the style of JAX, we lift scalar functions to operate on vectors.
+We will represent vectors and tensors as higher-order functions mapping
+indices to rational numbers to make our proofs easier, since we do not care
+about efficiency.
+
+-/
+
+-- Vector type. Maps a finite set of {0,...,n-1} to a rational.
+abbrev Vector (n : Nat) := Fin n → Rat
+
+-- Examples
+-- [10, 10, 10, 10, 10]
+def vector_of_tens_example: Vector 5 := fun _ => 10
+-- [0, 1, 2, 3]
+def arange (n: Nat) : Vector n := fun i => i
+
+-- Greek letters are types.
+variable {α : Type u} {β : Type v} {δ : Type w}
+
+-- vmap on 1-arg functions.
+def vmap (fn: α -> β) {n : Nat} :
+   ((Fin n -> α) -> (Fin n -> β)) :=
+  fun a => fun i => fn (a i)
+
+-- Example: vector vmap.
+def vector_relu (z: Vector n) : Vector n :=
+   (vmap relu) z
+
+-- vmap on 2-arg functions
+def vmap2 (fn: α -> β -> δ) : ((Fin n -> α) -> (Fin n -> β) -> (Fin n -> δ)) :=
+  fun a b => vmap (fun i => fn (a i) (b i)) id
+
+-- Add two vectors as + overload
+instance : Add (Vector n) where
+  add  := vmap2 (fun a b => a + b)
+
+-- Mul two vectors with * overload
+instance : Mul (Vector n) where
+  mul := vmap2 (fun a b => a * b)
+/-!
+
+
+For aggregations we define a vector scan. Since we are using rationals for simplicity we do not have an
+exponential, so we use a softmax-like normalization instead.
+
+
+-/
+-- Fold over vectors.
 
 abbrev fori {α : Type u} {n : Nat} (f : Fin n → α) : List α := List.ofFn f
 
-def Vector (n : Nat) := Fin n → Rat
+def scan (step : σ → α → σ) (xs : Fin n → α) (initial : σ) : σ :=
+  Fin.foldl n (fun state i => step state (xs i)) initial
 
-instance : Repr (Vector n) where
-  reprPrec v p := reprPrec (fori v) p
+-- Sum is a fold
+def Vector.sum (a : Vector n) : Rat :=
+  --scan (fun a b => a + b) a 0
+  (fori (fun i => a i)).sum
 
-instance : Add (Vector n) where
-  add a b := fun i => a i + b i
-
-instance : Mul (Vector n) where
-  mul a b := fun i => a i * b i
+def softmax_like (z : Vector n) : Vector n :=
+  let weights : Vector n := vmap (fun x => 1 + relu x) z
+  let total := weights.sum
+  vmap (fun w => w / total) weights
 
 def Vector.dot_product (a b : Vector n) : Rat :=
-  (fori fun i => a i * b i).sum
+  (a * b).sum
+/-!
 
-theorem Vector.mul_add (a b c : Vector n) : a * (b + c) = a * b + a * c := by
+
+As an exercise, let's look at a simple vector theorem. Click the square □
+next to each line of the proof and it will show you the current proof state.
+The proof state divides the context from the goal ⊢. Each step will transform
+these terms until we can construct the goal.
+
+-/
+
+-- Theorem: Multiplication distributes.
+theorem Vector.mul_add
+   -- Given vectors a, b, c, of length n
+   (a b c : Vector n) :
+   -- then
+   a * (b + c) = a * b + a * c
+   := by
+  -- Strategy: show equiv for all indices i of the output vector
   funext i
+  -- Apply the rational property to the numbers at position i.
   exact Rat.mul_add (a i) (b i) (c i)
 
-#eval
-  let x : Vector 3 := fun i => (i.val : Rat) + 1
-  (x + x, x * x, x.dot_product x)
-
-#eval (show Vector 0 from fun _ => 0)
-
 /-!
-# 2. Matrices and reductions
+
+Matrices are defined similarly. We are basically just stacking
+`vmap`'s to get our core operations.
+
 -/
 
-def Matrix (n m : Nat) := Fin n → Vector m
-
-instance : Repr (Matrix n m) where
-  reprPrec a p := reprPrec (fori a) p
+abbrev Matrix (n m : Nat) := Fin n → Vector m
 
 instance : Add (Matrix n m) where
-  add a b := fun i j => a i j + b i j
+  add := vmap2 (fun a b => a + b)
 
 instance : Mul (Matrix n m) where
-  mul a b := fun i j => a i j * b i j
-
-@[simp] theorem Matrix.add_apply (a b : Matrix n m) (i : Fin n) (j : Fin m) :
-    (a + b) i j = a i j + b i j := rfl
-
-@[simp] theorem Matrix.mul_apply (a b : Matrix n m) (i : Fin n) (j : Fin m) :
-    (a * b) i j = a i j * b i j := rfl
-
-def Matrix.col (a : Matrix n m) (j : Fin m) : Vector n :=
-  fun i => a i j
-
-def Matrix.matmul (a : Matrix n m) (b : Matrix m p) : Matrix n p :=
-  fun i j => (a i).dot_product (b.col j)
-
-/-!
-![Row equivariance: swapping the rows before matmul gives the same result as swapping the output rows.](site/diagrams/row-equivariance.svg)
--/
-
-theorem Matrix.matmul_row_equivariance (pick : Fin rows → Fin n)
-    (a : Matrix n m) (b : Matrix m p) :
-    Matrix.matmul (fun i j => a (pick i) j : Matrix rows m) b =
-      (fun i j => a.matmul b (pick i) j) := by
-  rfl
-
-theorem Matrix.matmul_column_equivariance (pick : Fin cols → Fin p)
-    (a : Matrix n m) (b : Matrix m p) :
-    a.matmul (fun i j => b i (pick j) : Matrix m cols) =
-      (fun i j => a.matmul b i (pick j)) := by
-  rfl
+  mul := vmap2 (fun a b => a * b)
 
 def Matrix.transpose (a : Matrix n m) : Matrix m n := fun i j => a j i
 
 def Matrix.matvec (a : Matrix n m) (x : Vector m) : Vector n :=
-  fun i => (a i).dot_product x
+  vmap (fun row => row.dot_product x) a
 
-namespace Examples
-
-def mat_ex1 : Matrix 2 3 := fun i j => 3 * (i.val : Rat) + (j.val : Rat) + 1
-
-def mat_ex2 : Matrix 3 2 := fun i j => 2 * (i.val : Rat) + (j.val : Rat) + 1
-
-end Examples
-
-#eval Examples.mat_ex1.matmul Examples.mat_ex2
-
-#eval
-  let swap : Fin 2 → Fin 2 := fun i => ⟨1 - i.val, by omega⟩
-  let a := Examples.mat_ex1
-  let b := Examples.mat_ex2
-  (Matrix.matmul (fun i j => a (swap i) j : Matrix 2 3) b,
-    a.matmul (fun i j => b i (swap j) : Matrix 3 2))
-
-#eval (Examples.mat_ex1 + Examples.mat_ex1, Examples.mat_ex1 * Examples.mat_ex1)
-
-theorem Matrix.matmul_zero_inner (a : Matrix n 0) (b : Matrix 0 p) (i : Fin n) (j : Fin p) :
-    (a.matmul b) i j = 0 := by rfl
-
-#eval (show Matrix 2 0 from fun _ _ => 0).matmul
-  (show Matrix 0 3 from fun _ _ => 0)
+def Matrix.matmul (a : Matrix n m) (b : Matrix m p) : Matrix n p :=
+  -- Functions can be called directly or with .transpose when the type is clear.
+  Matrix.transpose (vmap a.matvec b.transpose)
 
 /-!
-# 3. Exercise: tensor-parallel matrix multiplication
+
+This gives the full machinery to build our first neural network.
+This represents stacking layers that take and return the same shape.
+And a simple loss function.
+
+-/
+
+def forward (layer: Matrix hidden hidden) {batch : Nat} (input: Matrix batch hidden) :
+   Matrix batch hidden :=
+   (vmap (vmap relu)) (input.matmul layer)
+
+abbrev Layer {Shape : Type v} (State : Shape → Type u) :=
+  {shape : Shape} → State shape → State shape
+
+def neural_network {Shape : Type v} {State : Shape → Type u}
+    (layers : List (Layer State)) : Layer State :=
+  fun input => layers.foldl (fun state layer => layer state) input
+
+def loss (point_loss : Fin batch → Vector hidden → Rat)
+    (matrix : Matrix batch hidden) : Rat :=
+  Vector.sum (vmap2 point_loss id matrix)
+/-!
+
+
+# Properties of Neural Networks
+
+Now let us return to our goal of proving network equivariances.
+The strategy here will be to first show that equivariances compose,
+and then show that they propagate through a neural network.
+
+-/
+
+-- Equivariances compose
+theorem Equivariant.comp
+    -- Boilerplate
+    {Shape : Type u} {A : Shape → Type v} {B : Shape → Type w} {C : Shape → Type z}
+    {first : {shape : Shape} → A shape → B shape}
+    {next : {shape : Shape} → B shape → C shape}
+    {source target : Shape}
+    {T : A source → A target} {S : B source → B target} {U : C source → C target}
+
+    -- If f(T x) = S f(x)
+    (hfirst : Equivariant (Input := A) (Output := B) first T S)
+    -- and g(S x) = U g(x)
+    (hnext : Equivariant (Input := B) (Output := C) next S U) :
+    -- then g(f(T x )) = U (g (f (x)))
+    Equivariant (Input := A) (Output := C) (fun input => next (first input)) T U := by
+  intro input
+  exact (congrArg next (hfirst input)).trans (hnext (first input))
+
+-- Equivariances flow through tuples
+theorem Equivariant.prod
+    -- Boilerplate
+    {Shape : Type u}
+    {Input₁ : Shape → Type u₁} {Input₂ : Shape → Type u₂}
+    {Output₁ : Shape → Type v₁} {Output₂ : Shape → Type v₂}
+    {f : {shape : Shape} → Input₁ shape → Output₁ shape}
+    {g : {shape : Shape} → Input₂ shape → Output₂ shape}
+    {source target : Shape}
+    {T₁ : Input₁ source → Input₁ target} {S₁ : Output₁ source → Output₁ target}
+    {T₂ : Input₂ source → Input₂ target} {S₂ : Output₂ source → Output₂ target}
+
+    -- If f(T1 x) = S1 f(x)
+    (hf : Equivariant (Input := Input₁) (Output := Output₁) f T₁ S₁)
+    -- and g(T2 x) = S2 g(x)
+    (hg : Equivariant (Input := Input₂) (Output := Output₂) g T₂ S₂) :
+    -- Then <f,g> <T1 x, T2 y> = <S1 f(T1 x), S2 g(T2 y)>
+    -- TODO (correctness): The right side should be <S1 (f x), S2 (g y)>; do not apply T1 and T2 again.
+    Equivariant (Input := fun shape => Input₁ shape × Input₂ shape)
+      (Output := fun shape => Output₁ shape × Output₂ shape)
+      (fun input => Prod.map f g input) (Prod.map T₁ T₂) (Prod.map S₁ S₂) := by
+  intro x
+  exact Prod.ext (hf x.1) (hg x.2)
+
+
+-- Equivariants flow through neural networks.
+theorem neural_network_equivariant
+    {Shape : Type v} {State : Shape → Type u} {source target : Shape}
+    (layers : List (Layer State))
+    (transform : State source → State target)
+    -- If all layers preserve equivariance
+    (equivariant : ∀ layer ∈ layers,
+      Equivariant (Input := State) (Output := State) layer transform transform) :
+    -- Then the neural network itself preserves it.
+    Equivariant (Input := State) (Output := State) (neural_network layers) transform transform := by
+
+  -- Proof is by induction over layers.
+  induction layers with
+  | nil => intro input; rfl -- trivial
+  | cons layer rest ih =>
+      -- Utilize the fact that all layers are equivariant.
+      have composed := Equivariant.comp (equivariant layer (by simp))
+        (ih (fun layer member => equivariant layer (by simp [member])))
+      exact composed
+/-!
+
+
+We can use these properties to show that our neural network
+is selection equivariant, e.g. the result should be the same no matter
+what the batch is.
+
+![Selecting, reordering, and repeating positions commutes with a selection-equivariant function.](site/diagrams/selection-equivariance.svg)
+-/
+
+-- Select m arbitrary elements of a set of n elements.
+def select (selection : Fin m → Fin n) (a : Fin n → α) : Fin m → α :=
+  fun i => a (selection i)
+
+-- Slice out a fixed-size group.
+def slice (start count : Nat) (h : start + count ≤ n) (xs : Fin n → α) : Fin count → α :=
+  select (fun i => ⟨i.val + start, by omega⟩) xs
+
+
+-- Equivariance under every selection, including selection across lengths.
+def SelectionEquivariant (op : {n : Nat} → (Fin n → α) → (Fin n → β)) : Prop :=
+  ∀ {n m} (selection : Fin m → Fin n),
+    Equivariant (Input := fun n => Fin n → α) (Output := fun n => Fin n → β)
+      op (select selection) (select selection)
+
+-- Under vmap selection doesn't matter.
+theorem vmap_selection_equivariant (fn : α → β) :
+    SelectionEquivariant (vmap fn) := by
+  intro n m selection a
+  rfl
+
+@[simp] theorem vmap2_apply (fn : α → β → δ) (a : Fin n → α)
+    (b : Fin n → β) (i : Fin n) :
+    vmap2 fn a b i = fn (a i) (b i) := rfl
+
+/-!
+
+These can now be chained together to show that the whole neural network maintains this property.
+
+![Row equivariance: swapping the rows before matmul gives the same result as swapping the output rows.](site/diagrams/row-equivariance.svg)
+
+-/
+theorem Matrix.matmul_row_equivariant
+    (b : Matrix m p) :
+    SelectionEquivariant (fun (a : Matrix _ m) => a.matmul b) :=
+  vmap_selection_equivariant (fun (row : Vector m) => vmap row.dot_product b.transpose)
+
+-- Transpose to expose columns as the position axis.
+theorem Matrix.matmul_column_equivariant (a : Matrix n m) :
+    SelectionEquivariant (fun (bt : Matrix _ m) =>
+      (a.matmul bt.transpose).transpose) :=
+  vmap_selection_equivariant a.matvec
+
+-- MLPs are selection equivariant on batch.
+theorem forward_selection_equivariant (layer : Matrix hidden hidden) :
+    SelectionEquivariant (forward layer) := by
+    intro n m selection input
+    rfl
+
+theorem neural_network_selection_equivariant
+    (layers : List (Layer (fun n => Fin n → α)))
+    (equivariant : ∀ layer ∈ layers, SelectionEquivariant layer) :
+    SelectionEquivariant (neural_network layers) := by
+  intro n m selection
+  exact neural_network_equivariant layers (select selection)
+    (fun layer member => equivariant layer member selection)
+
+/-!
+
+
+# System Optimization
+
+
+When designing large-scale LLMs, there are several places where these properties
+can be exploited directly for parallelism. While in our "implementation", these properties
+are simple to see, when designing low-level optimized systems you would want to prove that none of your
+optimizations break them.
+
+## Batch Invariance
+
+Batch invariance ensures that the final loss of the system is independent of the size of the batch used. This property can
+ensure replicability across systems. See [Horace He's](https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/) beautifully
+described blog about how batch invariance can be lost under different optimizations.
+
+Here we prove that selection equivariance implies a simple form of batch invariance. Basically, you get the same loss
+independent of the batch.
+
+![Batch invariance: selecting an example before or after the same network gives the same output.](site/diagrams/batch-invariance.svg)
+
+-/
+
+-- The same example has the same scalar loss in a batch or on its own.
+theorem nn_batch_invariant
+    {nn : {batch : Nat} → (Fin batch → α) → (Fin batch → β)}
+    (equivariant : SelectionEquivariant nn) (point_loss : β → Rat)
+    (input : Fin batch → α) (b : Fin batch) :
+    point_loss (nn (select (fun _ : Fin 1 => b) input) 0) =
+      point_loss (nn input b) := by
+  exact congrArg point_loss (congrFun (equivariant (fun _ : Fin 1 => b) input) 0)
+
+
+/-!
+## Tensor Parallel
+
+Tensor parallelism is a common optimization for distributed neural networks.
+It's a fancy way of saying that instead of doing a matrix multiplication on one
+host, you can instead split it into two or more parts, do those multiplications separately,
+and then merge them.
+
 
 ![Tensor parallelism: split A by columns and B by rows, multiply each pair independently, and add the results.](site/diagrams/tensor-parallel.svg)
 -/
 
 def Matrix.row_split (a : Matrix (k + k) m) :
     Matrix k m × Matrix k m :=
-  ⟨fun i j => a (i.castAdd k) j,
-   fun i j => a (i.natAdd k) j⟩
+  -- Note here that i ∈ {0..k} but to index row need i ∈ {0..2 k}.
+  -- TODO (correctness): These bounds are exclusive: 0 ≤ i < k, embedded into indices below 2*k.
+  -- These functions handle that cast.
+  ⟨select (fun i => i.castAdd k) a,
+   select (fun i => i.natAdd k) a⟩
 
-#eval Examples.mat_ex1.row_split (k := 1)
+-- sum is splittable
+theorem Vector.sum_split (values : Vector (m + n)) :
+    Vector.sum (select (fun i : Fin m => i.castAdd n) values) +
+      Vector.sum (select (fun i : Fin n => i.natAdd m) values) = values.sum := by
+  simp only [Vector.sum, fori, select, List.ofFn_add, List.sum_append,
+    Fin.castAdd, Fin.castLE]
+
 
 def Matrix.tensor_parallel (a : Matrix n (k + k)) (b : Matrix (k + k) p) :
     Matrix n p :=
@@ -135,72 +430,38 @@ def Matrix.tensor_parallel (a : Matrix n (k + k)) (b : Matrix (k + k) p) :
   let c₂ := a₂.transpose.matmul b₂
   c₁ + c₂
 
-attribute [matrix_simps]
-  Matrix.tensor_parallel Matrix.transpose Matrix.row_split Matrix.matmul Matrix.col
-  Vector.dot_product List.ofFn_add List.sum_append
-
 theorem Matrix.tensor_parallel_correct
+    -- For any splittable a, b
     (a : Matrix n (k + k)) (b : Matrix (k + k) p) :
+    -- running tensor_parallel gives the same result as matmul
     a.tensor_parallel b = a.matmul b := by
+  -- Show each final i, j ends up the same.
   funext i j
-  simp [matrix_simps, Fin.castAdd, Fin.natAdd, Fin.castLE]
-
-#eval (Examples.mat_ex2.tensor_parallel (k := 1) Examples.mat_ex1,
-  Examples.mat_ex2.matmul Examples.mat_ex1)
-
+  exact Vector.sum_split (fun t => a i t * b t j)
 /-!
-# 4a. Layers, ReLU, and neural networks
--/
 
-def layer (input : Matrix batch hidden) (weight : Matrix hidden hidden) :
-    Matrix batch hidden :=
-  input.matmul weight
 
-def relu (z : Rat) : Rat := max z 0
+## Data Parallel
 
-#eval [relu (-3), relu 0, relu 4]
+Data parallelism says that, in training, we can split the data into
+different groups, run the full neural network and loss on different machines,
+and then combine. We need to ensure that we get the same result
+by running things separately as together.
 
-structure NeuralLayer (hidden : Nat) where
-  weight : Matrix hidden hidden
-
-def neural_network (layers : List (NeuralLayer hidden))
-    (input : Matrix batch hidden) : Matrix batch hidden :=
-  match layers with
-  | [] => input
-  | next :: rest =>
-      let output := layer input next.weight
-      neural_network rest (fun b j => relu (output b j))
-
-namespace Examples
-
-def nn_layers : List (NeuralLayer 3) :=
-  let identity : Matrix 3 3 := fun i j => if i = j then 1 else 0
-  [⟨identity⟩, ⟨identity⟩]
-
-end Examples
-
-#eval neural_network Examples.nn_layers Examples.mat_ex1
-
-theorem nn_batch_independence (pick : Fin small → Fin batch)
-    (layers : List (NeuralLayer hidden)) (input : Matrix batch hidden) :
-    neural_network layers (fun b j => input (pick b) j) =
-      (fun b => neural_network layers input (pick b)) := by
-  induction layers generalizing input with
-  | nil => rfl
-  | cons next rest ih =>
-      exact ih (fun b j => relu (layer input next.weight b j))
-
-def loss (point_loss : Fin batch → Vector hidden → Rat)
-    (matrix : Matrix batch hidden) : Rat :=
-  (fori fun b => point_loss b (matrix b)).sum
-
-/-!
-# 4b. Exercise: data-parallel neural networks
 
 ![Data parallelism: apply the same network to each batch half, sum point losses using their original batch indices, and add the two losses.](site/diagrams/data-parallel.svg)
 -/
 
-def data_parallel_loss (layers : List (NeuralLayer hidden))
+theorem loss_row_split (point_loss : Fin (k + k) → Vector hidden → Rat)
+    (output : Matrix (k + k) hidden) :
+    loss (fun b row => point_loss (b.castAdd k) row) output.row_split.1 +
+      loss (fun b row => point_loss (b.natAdd k) row) output.row_split.2 =
+      loss point_loss output :=
+  Vector.sum_split (fun b => point_loss b (output b))
+
+-- Split data points in half and run on separate machines.
+def data_parallel_loss
+    (layers : List (Layer (fun batch => Fin batch → Vector hidden)))
     (point_loss : Fin (k + k) → Vector hidden → Rat)
     (input : Matrix (k + k) hidden) : Rat :=
   let (first, second) := input.row_split
@@ -209,134 +470,44 @@ def data_parallel_loss (layers : List (NeuralLayer hidden))
   loss (fun b row => point_loss (b.natAdd k) row)
     (neural_network layers second)
 
-theorem data_parallel_loss_correct (layers : List (NeuralLayer hidden))
+theorem data_parallel_loss_correct
+    (layers : List (Layer (fun batch => Fin batch → Vector hidden)))
+    (equivariant : ∀ layer ∈ layers, SelectionEquivariant layer)
     (point_loss : Fin (k + k) → Vector hidden → Rat)
     (input : Matrix (k + k) hidden) :
     data_parallel_loss layers point_loss input =
       loss point_loss (neural_network layers input) := by
-  simp [data_parallel_loss, loss, Matrix.row_split, nn_batch_independence,
-    List.ofFn_add, List.sum_append, Fin.castAdd, Fin.natAdd, Fin.castLE]
-
-#eval
-  let point_loss : Fin 2 → Vector 3 → Rat := fun b row => (b.val : Rat) + row 0 * row 2
-  (loss point_loss (neural_network Examples.nn_layers Examples.mat_ex1),
-    data_parallel_loss (k := 1) Examples.nn_layers point_loss Examples.mat_ex1)
-
+  dsimp only [Matrix] at input
+  have equiv := neural_network_selection_equivariant layers equivariant (n := k + k) (m := k)
+  unfold Equivariant at equiv
+  simpa only [data_parallel_loss, Matrix.row_split, equiv] using
+    loss_row_split point_loss (neural_network layers input)
 /-!
-# 5. Sequences and discrete attention
+
+# Transformers and attention
+
+We next study a simple bidirectional Transformer with attention.
+The sequence becomes an additional dimension of our tensor.
+We first define attention.
+
 -/
 
-def Sequence (seq batch hidden : Nat) := Fin seq → Matrix batch hidden
 
-abbrev Sequence.hidden (input : Sequence seq batch h) (s : Fin seq)
-    (b : Fin batch) : Vector h :=
-  input s b
+-- A mixer takes <<q,k>,v> as an arg and returns the result.
+abbrev Mixer (seq hidden : Nat) :=
+  (Matrix seq hidden × Matrix seq hidden) × Matrix seq hidden → Matrix seq hidden
 
-structure PositionPermutation (seq : Nat) where
-  index : Fin seq → Fin seq
-  valid : (fori index).Perm (fori fun i : Fin seq => i)
+-- The famed softmax(Q K^T V) formula.
+def base_attention (s : Matrix seq seq → Matrix seq seq) : Mixer seq hidden :=
+  fun ((q,k), v) => Matrix.matmul (s (q.matmul k.transpose)) v
 
-def Sequence.permute {hidden : Nat} (π : PositionPermutation seq) (input : Sequence seq batch hidden) :
-    Sequence seq batch hidden :=
-  fun s => input (π.index s)
-
-def Sequence.select_batch {hidden : Nat} (pick : Fin small → Fin batch)
-    (input : Sequence seq batch hidden) : Sequence seq small hidden :=
-  fun s b => input s (pick b)
-
-instance : Repr (Sequence seq batch hidden) where
-  reprPrec x p := reprPrec (fori x) p
-
-def sequence_layer (input : Sequence seq batch hidden)
-    (weight : Matrix hidden hidden) :
-    Sequence seq batch hidden :=
-  fun s => layer (input s) weight
-
-theorem sequence_layer_local (input other : Sequence seq batch hidden)
-    (weight : Matrix hidden hidden)
-    (s : Fin seq) (b : Fin batch) (agree : input.hidden s b = other.hidden s b) :
-    (sequence_layer input weight).hidden s b = (sequence_layer other weight).hidden s b := by
-  funext j
-  simpa only [Sequence.hidden, sequence_layer, layer, Matrix.matmul, Vector.dot_product]
-    using congrArg (fun row => row.dot_product (weight.col j)) agree
-
-def Sequence.sum_seq {hidden : Nat} (output : Sequence seq batch hidden) : Matrix batch hidden :=
-  fun b j => (fori fun s => output.hidden s b j).sum
-
-def sequence_loss (point_loss : Fin batch → Vector hidden → Rat)
-    (output : Sequence seq batch hidden) : Rat :=
-  loss point_loss output.sum_seq
-
-#eval
-  let input : Sequence 2 2 1 := fun s b _ => (s.val : Rat) + (b.val : Rat)
-  let output := sequence_layer input (fun _ _ => 2)
-  (output, sequence_loss (fun _ row => row 0 * row 0) output)
-
+def attention_layer : Mixer seq hidden :=
+  fun input => base_attention (vmap softmax_like) input
 /-!
-# Rectified scores and Q/K/V
+
+A transformer block with parameters.
+
 -/
-
-theorem PositionPermutation.sum (π : PositionPermutation seq) (f : Fin seq → Rat) :
-    (fori fun s => f (π.index s)).sum = (fori f).sum := by
-  have hp := π.valid.map f
-  simp only [List.map_ofFn] at hp
-  exact hp.foldr_eq' (fun x _ y _ z => Rat.add_left_comm y x z) 0
-
-def softmax_like (z : Vector n) : Vector n :=
-  let total := (fori fun j => 1 + relu (z j)).sum
-  fun i => (1 + relu (z i)) / total
-
-theorem softmax_like_permute (π : PositionPermutation n) (z : Vector n) :
-    softmax_like (fun s => z (π.index s)) =
-      (fun s => softmax_like z (π.index s)) := by
-  funext s
-  exact congrArg (fun total => (1 + relu (z (π.index s))) / total)
-    (π.sum (fun t => 1 + relu (z t)))
-
-#eval
-  let z : Vector 3 := fun i => if i.val = 0 then -2 else if i.val = 1 then 3 else 1
-  (softmax_like z, softmax_like (fun _ : Fin 1 => 5))
-
-structure QKV (seq batch hidden : Nat) where
-  q : Sequence seq batch hidden
-  k : Sequence seq batch hidden
-  v : Sequence seq batch hidden
-
-abbrev project_qkv (input : Sequence seq batch hidden)
-    (wq wk wv : Matrix hidden hidden) : QKV seq batch hidden :=
-  ⟨sequence_layer input wq, sequence_layer input wk, sequence_layer input wv⟩
-
-def base_attention (input : QKV seq batch hidden)
-    (weights : Matrix seq seq → Matrix seq seq) : Sequence seq batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b =>
-    let queries : Matrix seq hidden := fun t => q.hidden t b
-    let keys : Matrix seq hidden := fun t => k.hidden t b
-    let values : Matrix seq hidden := fun t => v.hidden t b
-    ((weights (queries.matmul keys.transpose)).matmul values) s
-
-def linear_attention (input : QKV seq batch hidden)
-    (mask : Matrix seq seq := fun _ _ => 1) : Sequence seq batch hidden :=
-  base_attention input (fun logits => logits * mask)
-
-def attention_layer (input : QKV seq batch hidden) :
-    Sequence seq batch hidden :=
-  base_attention input (fun logits t => softmax_like (logits t))
-
-#eval
-  let input : Sequence 2 3 2 :=
-    fun s b j => 10 * (b.val : Rat) + 2 * (s.val : Rat) + (j.val : Rat) + 1
-  let wq : Matrix 2 2 := fun b j =>
-    if b.val = j.val then 1 else if b.val = 0 then 2 else 0
-  let wk : Matrix 2 2 := fun b j => if b.val = j.val then 0 else 1
-  let wv : Matrix 2 2 := fun b j => if b.val = 0 ∧ j.val = 1 then 0 else 1
-  let output := attention_layer (project_qkv input wq wk wv)
-  output
-
-/-!
-# 6. Stacking blocks
--/
-
 structure TransformerBlock (hidden : Nat) where
   weight : Matrix hidden hidden
   wq : Matrix hidden hidden
@@ -345,594 +516,656 @@ structure TransformerBlock (hidden : Nat) where
 
 abbrev Params (hidden : Nat) := List (TransformerBlock hidden)
 
-abbrev Mixer (seq batch hidden : Nat) :=
-  QKV seq batch hidden → Sequence seq batch hidden
+abbrev project_qkv (input : Matrix seq hidden)
+    (wq wk wv : Matrix hidden hidden) : (Matrix seq hidden × Matrix seq hidden) × Matrix seq hidden :=
+  ((input.matmul wq, input.matmul wk), input.matmul wv)
 
-def transformer (mixer : Mixer seq batch hidden)
-    (blocks : Params hidden) (input : Sequence seq batch hidden) :
-    Sequence seq batch hidden :=
-  match blocks with
-  | [] => input
-  | block :: rest =>
-      let output := sequence_layer input block.weight
-      let qkv := project_qkv output block.wq block.wk block.wv
-      transformer mixer rest (mixer qkv)
-
-def transformer_loss (mixer : Mixer seq batch hidden)
-    (blocks : Params hidden)
-    (point_loss : Fin batch → Vector hidden → Rat)
-    (input : Sequence seq batch hidden) : Rat :=
-  sequence_loss point_loss (transformer mixer blocks input)
+def transformer_block (mixer : Mixer seq hidden)
+    (block : TransformerBlock hidden) (input : Matrix seq hidden) :
+    Matrix seq hidden :=
+  let output := (vmap (vmap relu)) (Matrix.matmul input block.weight)
+  mixer (project_qkv output block.wq block.wk block.wv)
 
 /-!
-# 7. Exercise: permutation invariance
+
+One of the more surprising properties of the vanilla Transformer
+is that it is a set-based model, i.e. it is permutation equivariant
+in its input. Let's define first what that means generally.
+
 -/
+structure PositionPermutation (n : Nat) where
+  index : Fin n → Fin n
+  valid : (fori index).Perm (fori fun i : Fin n => i)
 
-theorem attention_layer_permute (π : PositionPermutation seq)
-    (input : Sequence seq batch hidden) (wq wk wv : Matrix hidden hidden) :
-    attention_layer (project_qkv (input.permute π) wq wk wv) =
-      (attention_layer (project_qkv input wq wk wv)).permute π := by
-  let q := sequence_layer input wq
-  let k := sequence_layer input wk
-  let v := sequence_layer input wv
-  funext s b j
-  let logits : Vector seq := fun t =>
-    (fori fun d => q (π.index s) b d * k t b d).sum
-  change (fori fun t => softmax_like (fun u => logits (π.index u)) t *
-      v (π.index t) b j).sum =
-    (fori fun t => softmax_like logits t * v t b j).sum
-  rw [softmax_like_permute]
-  exact π.sum (fun t => softmax_like logits t * v t b j)
+def permute (π : PositionPermutation n) (a : Fin n → α) : Fin n → α :=
+  select π.index a
 
-theorem transformer_permute (π : PositionPermutation seq)
-    (blocks : Params hidden) (input : Sequence seq batch hidden) :
-    transformer attention_layer blocks (input.permute π) = (transformer attention_layer blocks input).permute π := by
-  induction blocks generalizing input with
-  | nil => rfl
-  | cons block rest ih =>
-      change transformer attention_layer rest
-        (attention_layer (project_qkv ((sequence_layer input block.weight).permute π) block.wq block.wk block.wv)) = _
-      rw [attention_layer_permute, ih]
-      rfl
+def permute_both (π : PositionPermutation n) (a : Fin n → Fin n → α) :
+    Fin n → Fin n → α :=
+  permute π (vmap (permute π) a)
 
-theorem transformer_loss_position_invariant (π : PositionPermutation seq)
-    (blocks : Params hidden)
-    (point_loss : Fin batch → Vector hidden → Rat)
-    (input : Sequence seq batch hidden) :
-    transformer_loss attention_layer blocks point_loss (input.permute π) =
-      transformer_loss attention_layer blocks point_loss input := by
-  unfold transformer_loss sequence_loss
-  rw [transformer_permute]
-  congr 1
-  funext b j
-  exact π.sum (fun s => transformer attention_layer blocks input s b j)
+def permute_qkv {hidden : Nat} (π : PositionPermutation seq) :=
+  Prod.map (Prod.map (permute (α := Vector hidden) π) (permute (α := Vector hidden) π))
+    (permute (α := Vector hidden) π)
 
+
+def PermuteEquivariant (op : α → β)
+    -- If permutation is applied to our input,
+    (inputAction : PositionPermutation n → α → α := by exact permute)
+    -- The same permutation applied somehow to output yields the same result.
+    (outputAction : PositionPermutation n → β → β := by exact permute) : Prop :=
+  ∀ π : PositionPermutation n,
+    Equivariant (Input := fun _ : Unit => α) (Output := fun _ : Unit => β)
+       op  (source := ()) (target := ()) (inputAction π) (outputAction π)
 /-!
-# Exercise: batch invariance
+
+Most of the core operations we have defined have the necessary equivariance.
+The main additional property we need is for our softmax, which follows directly from
+addition.
+
 -/
 
-theorem transformer_select_batch (pick : Fin small → Fin batch)
-    (blocks : Params hidden) (input : Sequence seq batch hidden) :
-    transformer attention_layer blocks (input.select_batch pick) =
-      (transformer attention_layer blocks input).select_batch pick := by
-  induction blocks generalizing input with
-  | nil => rfl
-  | cons block rest ih =>
-      change transformer attention_layer rest
-        ((attention_layer (project_qkv (sequence_layer input block.weight) block.wq block.wk block.wv)).select_batch pick) = _
-      exact ih _
+-- SelectionEquivariance (vmap) implies permutation invariance.
+-- TODO (terminology): This theorem concludes permutation equivariance, not invariance.
+theorem SelectionEquivariant.permute
+    {op : {n : Nat} → (Fin n → α) → (Fin n → β)}
+    (equivariant : SelectionEquivariant op) : PermuteEquivariant (@op n) := by
+  intro π input
+  exact equivariant π.index input
 
-theorem transformer_loss_batch_split (blocks : Params hidden)
-    (point_loss : Fin (n + 1) → Vector hidden → Rat)
-    (input : Sequence seq (n + 1) hidden) :
-    transformer_loss attention_layer blocks point_loss input =
-      transformer_loss attention_layer blocks (fun b => point_loss b.castSucc)
-        (input.select_batch fun b : Fin n => b.castSucc) +
-      transformer_loss attention_layer blocks (fun _ : Fin 1 => point_loss (Fin.last n))
-        (input.select_batch fun _ : Fin 1 => Fin.last n) := by
-  unfold transformer_loss
-  rw [transformer_select_batch, transformer_select_batch]
-  simp only [sequence_loss, loss,
-    List.ofFn_succ_last, List.sum_append, List.sum_cons, List.sum_nil,
-    List.ofFn_zero, Rat.add_zero, Rat.zero_add]
+theorem vmap_permute_both (fn : (Fin n → α) → (Fin n → β))
+    (equivariant : PermuteEquivariant fn) :
+    PermuteEquivariant (vmap fn) permute_both permute_both := by
+  intro π input
+  calc
+    _ = permute π (vmap fn (vmap (permute π) input)) :=
+      vmap_selection_equivariant fn π.index _
+    _ = _ := congrArg (permute π) (funext (fun s => equivariant π (input s)))
+
+
+theorem sum_rat {xs ys : List Rat} (h : xs.Perm ys) : xs.sum = ys.sum :=
+   h.foldr_eq' (fun x _ y _ z => Rat.add_left_comm y x z) 0
+
+theorem permute_sum (π : PositionPermutation seq) (f : Fin seq → Rat) :
+     (Vector.sum (fun s => f (π.index s))) = (Vector.sum f) := by
+   simpa [Vector.sum, permute, select,
+     List.map_ofFn, Function.comp_def] using
+    sum_rat (π.valid.map f)
+
+theorem softmax_like_permute_equivariant :
+    PermuteEquivariant (n := n) softmax_like := by
+  intro π z
+  funext s
+  exact congrArg (fun total => (1 + relu (z (π.index s))) / total)
+    ((permute_sum π) (fun t => 1 + relu (z t)))
+
+def PermutationInvariant (op : (Fin n → α) → β) : Prop :=
+  ∀ π : PositionPermutation n,
+    Invariant (Input := fun _ : Unit => Fin n → α)
+      (fun input => op input) (source := ()) (target := ()) (permute π)
+
+theorem Matrix.matmul_transpose_permute :
+    PermuteEquivariant
+      (fun input : Matrix n hidden × Matrix n hidden => input.1.matmul input.2.transpose)
+      (fun π => Prod.map (permute π) (permute π)) permute_both := by
+  intro π input
   rfl
 
+theorem Matrix.matmul_permute :
+    PermuteEquivariant
+      (fun input : Matrix n n × Matrix n hidden => input.1.matmul input.2)
+      (fun π input => (permute_both π input.1, permute π input.2)) := by
+  intro π input
+  funext s j
+  exact permute_sum π (fun t => input.1 (π.index s) t * input.2 t j)
 /-!
-# Exercise: quadratic positional features
+
+Now we can show that the vanilla Transformer is permutation equivariant.
+-/
+
+theorem attention_layer_permute :
+    PermuteEquivariant (attention_layer (seq := seq) (hidden := hidden)) permute_qkv := by
+  intro π
+  have logits := Matrix.matmul_transpose_permute (n := seq) (hidden := hidden) π
+  have normalized := logits.comp (vmap_permute_both softmax_like softmax_like_permute_equivariant π)
+  exact (normalized.prod (SelectionEquivariant.permute (vmap_selection_equivariant id) π)).comp
+    (Matrix.matmul_permute π)
+
+theorem projected_attention_permute (wq wk wv : Matrix hidden hidden) :
+    PermuteEquivariant (n := seq) (fun input : Matrix seq hidden =>
+      attention_layer (project_qkv input wq wk wv)) := by
+  have projected : PermuteEquivariant
+      (fun input : Matrix seq hidden => project_qkv input wq wk wv) permute permute_qkv := by
+    intro π input
+    rfl
+  intro π
+  exact Equivariant.comp (projected π) (attention_layer_permute π)
+
+theorem transformer_block_permute (block : TransformerBlock hidden) :
+    PermuteEquivariant (n := seq) (transformer_block attention_layer block) := by
+  intro π
+  unfold transformer_block
+  exact Equivariant.comp
+    (SelectionEquivariant.permute (forward_selection_equivariant block.weight) π)
+    (projected_attention_permute block.wq block.wk block.wv π)
+
+theorem transformer_permute (blocks : Params hidden) :
+    PermuteEquivariant (n := seq)
+      (neural_network (State := fun _ : Unit => _) (shape := ())
+          (blocks.map (fun block => transformer_block attention_layer block))) := by
+  intro π
+  apply neural_network_equivariant
+  intro layer member
+  obtain ⟨block, _, rfl⟩ := List.mem_map.mp member
+  exact transformer_block_permute block π
+
+/-!
+
+Of course in practice we add additional information that breaks this property.
+The simplest way is through the use of positional features. We can show that even
+simple positional features break equivariance with a direct counterexample.
+
 -/
 
 def position_features (i : Rat) : Vector 3 :=
   fun d => if d.val = 0 then i else if d.val = 1 then i * i else 1
 
-def position_query (i : Rat) : Vector 3 :=
-  let p := position_features i
-  fun d => if d.val = 0 then 2 * p 0 else if d.val = 1 then -p 1 else p 2
+def Matrix.add_positions (input : Matrix seq 3) : Matrix seq 3 :=
+  fun s => input s + position_features (s.val : Rat)
 
-def position_key (j : Rat) : Vector 3 :=
-  let p := position_features j
-  fun d => if d.val = 0 then p 0 else if d.val = 1 then p 2 else -p 1
-
-theorem position_dot_product (i j : Rat) :
-    (position_query i).dot_product (position_key j) = -(i - j) * (i - j) := by
-  simp [Vector.dot_product, position_query, position_key, position_features,
-    List.ofFn_succ]
-  grind
-
-def Sequence.add_positions (input : Sequence seq batch 3) : Sequence seq batch 3 :=
-  fun s b => input s b + position_features (s.val : Rat)
-
-theorem positional_transformer_breaks_permutation_invariance :
+theorem positional_transformer_breaks_permutation_equivariance :
     let identity : Matrix 3 3 := fun i j => if i = j then 1 else 0
     let block : TransformerBlock 3 := ⟨identity, identity, identity, identity⟩
-    let input : Sequence 2 1 3 := fun s _ d => if d.val = 0 then (s.val : Rat) else 0
-    let swap : PositionPermutation 2 :=
-      ⟨fun s => ⟨1 - s.val, by omega⟩, by decide⟩
-    let point_loss : Fin 1 → Vector 3 → Rat := fun _ row => row 0
-    transformer_loss attention_layer [block] point_loss (input.permute swap).add_positions ≠
-      transformer_loss attention_layer [block] point_loss input.add_positions := by
+    let layers : List (Layer (fun seq => Matrix seq 3)) :=
+      [@Matrix.add_positions, fun input => transformer_block attention_layer block input]
+    ¬ PermuteEquivariant (n := 2) (neural_network (shape := 2) layers) := by
+  dsimp only
+  intro equivariant
+  let input : Matrix 2 3 := fun s d => if d.val = 0 then (s.val : Rat) else 0
+  let swap : PositionPermutation 2 :=
+    ⟨fun s => ⟨1 - s.val, by omega⟩, by decide⟩
+  have same := congrArg (fun output => output 0 0) (equivariant swap input)
+  revert same
   decide +kernel
 
-#eval
-  let q : Matrix 4 3 := fun i => position_query (i.val : Rat)
-  let k : Matrix 4 3 := fun j => position_key (j.val : Rat)
-  q.matmul k.transpose
-
 /-!
-# 8. Exercise: a sliding-window receptive field
+
+
+# Sparse Attention
+
+
+An alternative to full attention over the sequence is a sparse
+attention over a local region. Sliding window attention
+only looks at the surrounding window. We implement this with a
+windowed mask.
+
 -/
 
 abbrev InWindow (radius : Nat) (s t : Fin seq) : Prop :=
   s.val ≤ t.val + radius ∧ t.val ≤ s.val + radius
 
-def swa (radius : Nat) (input : QKV seq batch hidden) :
-    Sequence seq batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b j => (fori fun t =>
-    if InWindow radius s t then
-      (fori fun d => q s b d * k t b d).sum * v t b j
-    else 0).sum
+def window_mask (radius : Nat) : Matrix seq seq :=
+  fun s t => if InWindow radius s t then 1 else 0
 
-theorem swa_local (radius : Nat) (input other : Sequence seq batch hidden)
-    (wq wk wv : Matrix hidden hidden)
-    (s : Fin seq) (b : Fin batch)
-    (agree : ∀ t, InWindow radius s t → input.hidden t b = other.hidden t b) :
-    (swa radius (project_qkv input wq wk wv)).hidden s b =
-      (swa radius (project_qkv other wq wk wv)).hidden s b := by
-  have center : InWindow radius s s := by constructor <;> omega
-  have projection (w : Matrix hidden hidden)
-      (t : Fin seq) (ht : InWindow radius s t) :=
-    sequence_layer_local input other w t b (agree t ht)
-  funext j
-  dsimp only [swa]
-  apply congrArg List.sum
-  apply congrArg fori
-  funext t
-  by_cases ht : InWindow radius s t
-  · simp only [projection wq s center,
-      projection wk t ht, projection wv t ht]
-  · simp only [ht, if_false]
+def matrix_mask (radius: Nat) (a: Matrix m m) : Matrix m m :=
+  let mask: Matrix m m := window_mask radius
+  a * mask
 
-theorem swa_transformer_local (radius : Nat) (blocks : Params hidden)
-    (input other : Sequence seq batch hidden) (s : Fin seq) (b : Fin batch)
-    (agree : ∀ t, InWindow (blocks.length * radius) s t → input.hidden t b = other.hidden t b) :
-    (transformer (swa radius) blocks input).hidden s b =
-      (transformer (swa radius) blocks other).hidden s b := by
-  induction blocks generalizing input other with
-  | nil => exact agree s (by simp [InWindow])
-  | cons block rest ih =>
-      apply ih
-      intro t ht
-      apply swa_local
-      intro u hu
-      apply sequence_layer_local
-      apply agree
-      simp only [List.length_cons, Nat.succ_mul]
-      dsimp [InWindow] at ht hu ⊢
-      omega
+def swa (radius : Nat) : Mixer seq hidden :=
+  base_attention (matrix_mask radius)
 
-namespace Examples
-
-def one : Matrix 1 1 := fun _ _ => 1
-
-def block : TransformerBlock 1 :=
-  ⟨one, one, one, one⟩
-
-end Examples
-
-#eval
-  let one := Examples.one
-  let block := Examples.block
-  let input : Sequence 5 1 1 := fun _ _ _ => 1
-  let far : Sequence 5 1 1 := fun s _ _ => if s.val = 3 then 2 else 1
-  let boundary : Sequence 5 1 1 := fun s _ _ => if s.val = 2 then 2 else 1
-  (transformer (swa 1) [block, block] input 0 0,
-    transformer (swa 1) [block, block] far 0 0,
-    transformer (swa 1) [block, block] boundary 0 0,
-    transformer (swa 0) [block, block] far 0 0,
-    swa 5 (project_qkv input one one one) 0 0)
 
 /-!
-# 9. Exercise: tiled attention
+
+
+The sliding window has the property that each position is only impacted by
+the region around it. We formalize this idea below.
+
+
+![Inputs agreeing within a window give the same output at its center, even when outside values differ.](site/diagrams/region-invariance.svg)
+
 -/
 
-def tile (n c : Nat) (xs : List α) : List α :=
-  (xs.drop (c * n)).take n
+-- Value is not impacted outside a region of a given radius.
+def RegionInvariant (radius : Nat)
+    (op : (Fin seq → α) → Fin seq → β) : Prop :=
+  ∀ (input other : Fin seq → α) (s : Fin seq),
+    (∀ t, InWindow radius s t → input t = other t ) →
+      op input s = op other s
 
+-- Selection equivariant (MLP layers) have radius 0
+theorem SelectionEquivariant.region_invariant
+    {op : {n : Nat} → (Fin n → α) → (Fin n → β)}
+    (equivariant : SelectionEquivariant op) : RegionInvariant (seq := seq) 0 op := by
+  intro a other i agree
+  have same := agree i (by constructor <;> omega)
+  calc
+    op a i = op (fun _ : Fin 1 => a i) 0 :=
+      (congrFun (equivariant (fun _ : Fin 1 => i) a) 0).symm
+    _ = op (fun _ : Fin 1 => other i) 0 := by rw [same]
+    _ = op other i := congrFun (equivariant (fun _ : Fin 1 => i) other) 0
+
+-- vmap has radius 0
+theorem vmap_region_invariant (fn : α → β) :
+    RegionInvariant (seq := seq) 0 (vmap fn) :=
+  SelectionEquivariant.region_invariant (vmap_selection_equivariant fn)
+
+/-!
+
+The interesting new aspect of region invariance will be how it composes.
+Region invariance is additive under composition.
+
+-/
+
+-- Composing sliding windows increases the radius.
+theorem RegionInvariant.comp
+    {first : (Fin seq → α) → Fin seq → β}
+    {second : (Fin seq → β) → Fin seq → δ}
+    (hfirst : RegionInvariant r first) (hsecond : RegionInvariant t second) :
+    RegionInvariant (r + t) (fun input => second (first input)) := by
+  intro input other s agree
+  apply hsecond
+  intro u hu
+  apply hfirst
+  intro v hv
+  apply agree
+  dsimp [InWindow] at hu hv ⊢
+  constructor <;> omega
+
+-- NNs with same layers have multiplicative radius.
+theorem neural_network_region_invariant (radius : Nat)
+    (layers : List (Layer (fun seq => Fin seq → α)))
+    (invariant : ∀ layer ∈ layers, RegionInvariant radius (@layer seq)) :
+    RegionInvariant (seq := seq) (layers.length * radius) (neural_network layers) := by
+  induction layers with
+  | nil =>
+      intro input other s agree
+      exact agree s (by constructor <;> omega)
+  | cons layer rest ih =>
+      have composed := RegionInvariant.comp (invariant @layer (by simp))
+        (ih (fun layer member => invariant @layer (by simp [member])))
+      simpa only [RegionInvariant, List.length_cons, Nat.add_mul, Nat.one_mul, Nat.add_comm,
+        neural_network, List.foldl_cons] using composed
+
+
+/-!
+
+Finally we need to show the radius of SWA. We first show that our implementation of masking
+leads to a given radius and then apply this to the sparse attention implementation.
+-/
+attribute [local simp] Rat.add_zero Rat.zero_add Rat.zero_mul Rat.mul_zero
+
+
+theorem Matrix.masked_matmul_region_invariant (radius : Nat)
+    (weights : Matrix seq seq) :
+    RegionInvariant radius (fun values : Matrix seq hidden =>
+      (matrix_mask radius weights).matmul values) := by
+  intro input other s agree
+  funext j
+  apply congrArg Vector.sum
+  funext t
+  change weights s t * window_mask radius s t * input t j =
+    weights s t * window_mask radius s t * other t j
+  by_cases ht : InWindow radius s t
+  · rw [agree t ht]
+  · simp [window_mask, ht]
+
+
+
+theorem swa_region_invariant (radius : Nat) (wq wk wv : Matrix hidden hidden) :
+    RegionInvariant (seq := seq) radius
+      (fun input => swa radius (project_qkv input wq wk wv)) := by
+  intro input other s agree
+  have center := agree s (by constructor <;> omega)
+  let contribution (query row : Vector hidden) : Vector hidden := fun j =>
+    Vector.dot_product (fun d => query.dot_product (wq.transpose d))
+      (fun d => row.dot_product (wk.transpose d)) * row.dot_product (wv.transpose j)
+  have masked (x : Matrix seq hidden) :
+      swa radius (project_qkv x wq wk wv) s =
+        (matrix_mask radius (fun _ _ => 1)).matmul (vmap (contribution (x s)) x) s := by
+    funext j
+    apply congrArg Vector.sum
+    funext t
+    exact (show ∀ a b c : Rat, a * b * c = (1 * b) * (a * c) by
+      intros; grind) _ _ _
+  have same := Matrix.masked_matmul_region_invariant radius (fun _ _ => 1)
+    (vmap (contribution (input s)) input) (vmap (contribution (input s)) other) s
+    (fun t ht => congrArg (contribution (input s)) (agree t ht))
+  exact (masked input).trans (same.trans (by simpa only [center] using (masked other).symm))
+
+
+/-!
+# Flash Attention
+
+Once we have standard attention implemented, we can begin to consider optimizations.
+Flash attention uses a tiling approach to split the full sequence into groups which
+can be computed separately to reduce memory. We define a typed tiling.
+
+
+-/
+
+-- Split into n groups of size tiles.
+def tile (n : Nat) (xs : Fin (tiles * n) → α) (c : Fin tiles) : Fin n → α :=
+  -- The proof here shows that it is legal to make this slicing.
+  slice (c.val * n) n (by
+    have := Nat.mul_le_mul_right n c.isLt
+    simpa [Nat.succ_mul] using this) xs
+
+-- Apply an accumulator across each of these.
 def tile_fold (tiles n : Nat) (step : σ → α → σ)
-    (xs : List α) (shape : xs.length = tiles * n) (state : σ) : σ :=
-  match tiles with
-  | 0 => state
-  | tiles + 1 =>
-      tile_fold tiles n step (xs.drop n)
-        (by simp [List.length_drop, shape, Nat.succ_mul])
-        ((tile n 0 xs).foldl step state)
+    (xs : Fin (tiles * n) → α) (initial : σ) : σ :=
+  scan (fun state chunk => scan step chunk state) (tile n xs) initial
 
-theorem tile_fold_eq (tiles n : Nat) (step : σ → α → σ)
-    (xs : List α) (shape : xs.length = tiles * n) (state : σ) :
-    tile_fold tiles n step xs shape state = xs.foldl step state := by
-  induction tiles generalizing xs state with
-  | zero =>
-      have empty : xs = [] := by simpa using shape
-      subst xs
-      rfl
-  | succ tiles ih =>
-      simp only [tile_fold, tile, Nat.zero_mul, List.drop_zero]
-      rw [ih, ← List.foldl_append, List.take_append_drop]
 
-structure FlashStats (hidden : Nat) where
+
+/-!
+
+Once we have this primitive we can compute and aggregate a value for each tile.
+
+![Process equal-size key/value tiles, carry the two accumulators, and normalize once at the end.](site/diagrams/flash-attention.svg)
+
+-/
+
+structure FlashAcc (hidden : Nat) where
   scoreSum : Rat
   weighted : Vector hidden
 
 def flash_step (r : α → Rat) (v : α → Vector hidden)
-    (state : FlashStats hidden) (t : α) : FlashStats hidden :=
+    (state : FlashAcc hidden) (t : α) : FlashAcc hidden :=
   let score := r t
   { scoreSum := state.scoreSum + score
     weighted := fun j => state.weighted j + score * v t j }
 
-def flash_attention (tiles n : Nat) (input : QKV (tiles * n) batch hidden) :
-    Sequence (tiles * n) batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b =>
-    let r := fun t => 1 + relu ((fori fun d => q s b d * k t b d).sum)
-    let initial : FlashStats hidden := ⟨0, fun _ => 0⟩
-    let state := tile_fold tiles n (flash_step r (fun t => v t b))
-      (fori fun t : Fin (tiles * n) => t) (by simp [fori]) initial
+def flash_attention (tiles n : Nat) (input : (Matrix (tiles * n) hidden × Matrix (tiles * n) hidden) × Matrix (tiles * n) hidden) :
+    Matrix (tiles * n) hidden :=
+  let ⟨⟨q, k⟩, v⟩ := input
+  fun s =>
+    let r := fun t => 1 + relu (Vector.sum (fun d => q s d * k t d))
+    let initial : FlashAcc hidden := ⟨0, fun _ => 0⟩
+    let state := tile_fold tiles n (flash_step r v)
+      (fun t : Fin (tiles * n) => t) initial
     fun j => state.weighted j / state.scoreSum
 
-private theorem flash_fold (xs : List α) (r : α → Rat) (v : α → Vector hidden)
-    (state : FlashStats hidden) :
-    xs.foldl (flash_step r v) state =
-      { scoreSum := state.scoreSum + (xs.map r).sum
-        weighted := fun j => state.weighted j + (xs.map fun t => r t * v t j).sum } := by
-  induction xs generalizing state with
-  | nil => cases state; simp
-  | cons x xs ih => simp [List.foldl_cons, ih, flash_step, Rat.add_assoc]
+/-!
 
-private theorem sum_attention (xs : List α) (r v : α → Rat) (total : Rat) :
-    (xs.map fun t => (r t / total) * v t).sum =
-      (xs.map fun t => r t * v t).sum / total := by
-  induction xs with
-  | nil => simp; grind
-  | cons x xs ih =>
-      simp only [List.map_cons, List.sum_cons, ih]
-      grind
+For our equivalence proof, we need to define some basic properties of scans and sums.
+These are not unique to Flash attention, but would be in a core mathematics library.
+
+-/
+
+
+theorem scan_slice (step : σ → α → σ) (xs : Fin n → α)
+    (start count : Nat) (h : start + count ≤ n) (initial : σ) :
+    scan step (slice start count h xs)
+      (scan step (slice 0 start (by omega) xs) initial) =
+    scan step (slice 0 (start + count) (by omega) xs) initial := by
+  simp only [scan, Fin.foldl_add, slice, select, Nat.add_zero, Fin.val_castLE,
+    Fin.val_natAdd, Nat.add_comm]
+
+theorem scan_full (step : σ → α → σ) (xs : Fin n → α) (initial : σ)
+    (h : count = n) : scan step (slice 0 count (by omega) xs) initial = scan step xs initial := by
+  subst count
+  rfl
+
+theorem Vector.sum_succ (f : Vector (n + 1)) :
+    f.sum = f 0 + Vector.sum (fun i : Fin n => f i.succ) := by
+  simp [Vector.sum, fori, List.ofFn_succ]
+
+theorem Vector.sum_mul (f : Vector n) (c : Rat) :
+    f.sum * c = Vector.sum (fun i => f i * c) := by
+  induction n with
+  | zero => simp [Vector.sum, fori, Rat.zero_mul]
+  | succ n ih => rw [Vector.sum_succ, Rat.add_mul, ih, Vector.sum_succ]
+
+theorem Vector.sum_last (f : Vector (n + 1)) :
+    f.sum = Vector.sum (fun i : Fin n => f i.castSucc) + f (Fin.last n) := by
+  simp only [Vector.sum, fori, List.ofFn_succ_last, List.sum_append, List.sum_cons,
+    List.sum_nil, Rat.add_zero]
+
+theorem Vector.sum_rev (f : Vector n) : Vector.sum (fun t => f t.rev) = f.sum := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      rw [Vector.sum_succ, Vector.sum_last f]
+      have h := ih (fun i => f i.castSucc)
+      simpa [Fin.rev_succ, Rat.add_comm] using congrArg (fun z => f (Fin.last n) + z) h
+
+
+theorem tile_fold_eq (tiles n : Nat) (step : σ → α → σ)
+    (xs : Fin (tiles * n) → α) (initial : σ) :
+    tile_fold tiles n step xs initial = scan step xs initial := by
+  induction tiles generalizing initial with
+  | zero => simp [tile_fold, scan]
+  | succ tiles ih =>
+      have shape : (tiles + 1) * n = tiles * n + n := Nat.succ_mul tiles n
+      rw [tile_fold, scan, Fin.foldl_succ_last]
+      change scan step (slice (tiles * n) n (by omega) xs)
+        (tile_fold tiles n step (slice 0 (tiles * n) (by omega) xs) initial) = _
+      rw [ih, scan_slice]
+      exact scan_full _ _ _ shape.symm
+
+/-!
+
+The main proof is that flash attention is equivalent to our original attention.
+This is done by showing a lemma over the internal fold that we are accumulating the correct values.
+
+-/
+
+
+private theorem flash_fold (xs : Fin n → α) (r : α → Rat) (v : α → Vector hidden)
+    (state : FlashAcc hidden) :
+    scan (flash_step r v) xs state =
+      { scoreSum := state.scoreSum + Vector.sum (fun i => r (xs i))
+        weighted := fun j => state.weighted j + Vector.sum (fun i => r (xs i) * v (xs i) j) } := by
+  induction n generalizing state with
+  | zero => cases state; simp [scan, Vector.sum, fori]
+  | succ n ih =>
+      simp only [scan, Fin.foldl_succ]
+      change scan (flash_step r v) (fun i => xs i.succ) (flash_step r v state (xs 0)) = _
+      rw [ih]
+      simp [Vector.sum_succ, flash_step, Rat.add_assoc]
 
 theorem flash_attention_eq (tiles n : Nat)
-    (input : QKV (tiles * n) batch hidden) :
+    (input : (Matrix (tiles * n) hidden × Matrix (tiles * n) hidden) × Matrix (tiles * n) hidden) :
     flash_attention tiles n input = attention_layer input := by
-  rcases input with ⟨q, k, v⟩
-  funext s b j
-  simp only [flash_attention, tile_fold_eq, flash_fold, List.map_ofFn,
+  rcases input with ⟨⟨q, k⟩, v⟩
+  funext s j
+  simp only [flash_attention, tile_fold_eq, flash_fold,
     Rat.zero_add]
-  let r := fun t => 1 + relu ((fori fun d => q s b d * k t b d).sum)
-  simpa only [List.map_ofFn, Function.comp_def, attention_layer, base_attention, softmax_like, Matrix.matmul, Matrix.col, Vector.dot_product,
-    Matrix.transpose, r] using
-    (sum_attention (fori fun t : Fin (tiles * n) => t) r (fun t => v t b j)
-      (fori r).sum).symm
-
-/-!
-# Compare equal-size tiles
--/
-
-#eval
-  let input : Sequence 4 2 2 :=
-    fun s b j => 2 * (s.val : Rat) + 3 * (b.val : Rat) + (j.val : Rat) - 2
-  let identity : Matrix 2 2 := fun b j => if b.val = j.val then 1 else 0
-  let swap : Matrix 2 2 := fun b j => if b.val = j.val then 0 else 1
-  [flash_attention 4 1 (project_qkv input identity swap identity),
-    flash_attention 2 2 (project_qkv input identity swap identity),
-    flash_attention 1 4 (project_qkv input identity swap identity)]
-
-/-!
-# 10. One recurrence, two scan directions
--/
-
-def ssm_scan (α : Rat) (values : List Rat) : Rat :=
-  values.foldl (fun state x => α * state + x) 0
-
-def ssm_state (α : Rat) (updates : List (Matrix hidden hidden)) : Matrix hidden hidden :=
-  fun d j => ssm_scan α (updates.map fun update => update d j)
-
-theorem ssm_state_step (α : Rat) (updates : List (Matrix hidden hidden))
-    (update : Matrix hidden hidden) :
-    ssm_state α (updates ++ [update]) =
-      (fun d j => α * ssm_state α updates d j + update d j) := by
-  funext d j
-  simp [ssm_state, ssm_scan, List.foldl_append]
-
-def ssm_layer (α : Rat) (input : QKV seq batch hidden) : Sequence seq batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b =>
-    let updates := fori fun t => (fun d j => k t b d * v t b j : Matrix hidden hidden)
-    let state := ssm_state α (updates.take (s.val + 1))
-    state.transpose.matvec (q.hidden s b)
-
-def bidirectional_ssm_layer (α : Rat) (input : QKV seq batch hidden) : Sequence seq batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b =>
-    let updates := fori fun t => (fun d j => k t b d * v t b j : Matrix hidden hidden)
-    let state := ssm_state α (updates.take (s.val + 1)) +
-      ssm_state α (updates.drop s.val).reverse
-    state.transpose.matvec (q.hidden s b)
-
-/-!
-# When does order matter?
--/
-
-namespace Examples
-
-def ramp (seq : Nat) : Sequence seq 1 1 := fun s _ _ => (s.val : Rat) + 1
-
-def point_loss : Fin 1 → Vector 1 → Rat := fun _ row => row 0
-
-def swap2 : PositionPermutation 2 :=
-  ⟨fun s => ⟨1 - s.val, by omega⟩, by decide⟩
-
-def swap3 : PositionPermutation 3 :=
-  ⟨fun s => if s.val < 2 then ⟨1 - s.val, by omega⟩ else s, by decide⟩
-
-end Examples
-
-theorem ssm_breaks_position_invariance :
-    let input := Examples.ramp 2
-    transformer_loss (ssm_layer 1) [Examples.block] Examples.point_loss
-        (input.permute Examples.swap2) ≠
-      transformer_loss (ssm_layer 1) [Examples.block] Examples.point_loss input := by
-  decide +kernel
-
-theorem alpha_ssm_breaks_position_invariance :
-    let input := Examples.ramp 3
-    transformer_loss (bidirectional_ssm_layer 2) [Examples.block] Examples.point_loss
-        (input.permute Examples.swap3) ≠
-      transformer_loss (bidirectional_ssm_layer 2) [Examples.block] Examples.point_loss input := by
-  decide +kernel
-
-private theorem bidirectional_scan_one (f : Fin n → Rat) (s : Fin n) :
-    ssm_scan 1 ((fori f).take (s.val + 1)) +
-      ssm_scan 1 ((fori f).drop s.val).reverse = (fori f).sum + f s := by
-  let values := fori f
-  have bound : s.val < values.length := by simp [values, fori]
-  have split := congrArg List.sum (List.take_append_drop s.val values)
-  simp only [List.sum_append] at split
-  simp only [ssm_scan, Rat.one_mul, ← List.sum_eq_foldl]
-  change (values.take (s.val + 1)).sum + (values.drop s.val).reverse.sum =
-    values.sum + f s
-  rw [List.sum_reverse, List.take_succ_eq_append_getElem bound, List.sum_append]
-  simp only [List.sum_cons, List.sum_nil, Rat.add_zero]
-  have current : values[s.val] = f s := by simp [values, fori]
-  rw [current]
+  let r := fun t => 1 + relu (Vector.sum (fun d => q s d * k t d))
+  change Vector.sum (fun t => r t * v t j) / Vector.sum r =
+    Vector.sum (fun t => (r t / Vector.sum r) * v t j)
+  simp only [Rat.div_def, Vector.sum_mul]
+  apply congrArg Vector.sum
+  funext t
   grind
 
-set_option backward.isDefEq.respectTransparency false in
-theorem bidirectional_ssm_layer_eq (input : Sequence seq batch hidden)
-    (wq wk wv : Matrix hidden hidden) (s : Fin seq) (b : Fin batch) (j : Fin hidden) :
-    bidirectional_ssm_layer 1 (project_qkv input wq wk wv) s b j =
-      (fori fun d =>
-        ((fori fun t => sequence_layer input wk t b d * sequence_layer input wv t b j).sum +
-          sequence_layer input wk s b d * sequence_layer input wv s b j) *
-        sequence_layer input wq s b d).sum := by
-  simp only [bidirectional_ssm_layer, Matrix.matvec, Matrix.transpose,
-    Matrix.add_apply, Vector.dot_product, ssm_state, Sequence.hidden]
-  simp only [List.map_take, List.map_reverse, List.map_drop, List.map_ofFn, Function.comp_def]
-  simp only [bidirectional_scan_one]
-
-theorem bidirectional_ssm_layer_permute (π : PositionPermutation seq)
-    (input : Sequence seq batch hidden) (wq wk wv : Matrix hidden hidden) :
-    bidirectional_ssm_layer 1 (project_qkv (input.permute π) wq wk wv) =
-      (bidirectional_ssm_layer 1 (project_qkv input wq wk wv)).permute π := by
-  funext s b j
-  simp only [Sequence.permute, bidirectional_ssm_layer_eq]
-  apply congrArg List.sum
-  apply congrArg fori
-  funext d
-  exact congrArg (fun total =>
-    (total + sequence_layer input wk (π.index s) b d * sequence_layer input wv (π.index s) b j) *
-      sequence_layer input wq (π.index s) b d)
-    (π.sum (fun t => sequence_layer input wk t b d * sequence_layer input wv t b j))
-
-theorem bidirectional_ssm_loss_position_invariant (π : PositionPermutation seq)
-    (blocks : Params hidden) (point_loss : Fin batch → Vector hidden → Rat)
-    (input : Sequence seq batch hidden) :
-    transformer_loss (bidirectional_ssm_layer 1) blocks point_loss (input.permute π) =
-      transformer_loss (bidirectional_ssm_layer 1) blocks point_loss input := by
-  have equiv (blocks : Params hidden) (input : Sequence seq batch hidden) :
-      transformer (bidirectional_ssm_layer 1) blocks (input.permute π) =
-        (transformer (bidirectional_ssm_layer 1) blocks input).permute π := by
-    induction blocks generalizing input with
-    | nil => rfl
-    | cons block rest ih =>
-        change transformer (bidirectional_ssm_layer 1) rest
-          (bidirectional_ssm_layer 1 (project_qkv ((sequence_layer input block.weight).permute π) block.wq block.wk block.wv)) = _
-        rw [bidirectional_ssm_layer_permute, ih]
-        rfl
-  unfold transformer_loss sequence_loss
-  rw [equiv]
-  congr 1
-  funext b j
-  exact π.sum (fun s => transformer (bidirectional_ssm_layer 1) blocks input s b j)
-
 /-!
-# 11. Exercise: chunkwise SSM
+
+# State Space Models
+
+Another alternative to standard attention is to use a state space model or linear attention approach.
+These can be defined by the following recurrence.
+
+
+
+![The recurrent, masked linear-attention, and chunkwise forms compute the same decayed SSM.](site/diagrams/ssm.svg)
+
 -/
 
-def ssm_chunk (α : Rat) (updates : List (Matrix hidden hidden))
-    (incoming : Matrix hidden hidden) : Matrix hidden hidden :=
-  fun d j => α ^ updates.length * incoming d j +
-    (updates.mapIdx fun t update => α ^ (updates.length - 1 - t) * update d j).sum
+def ssm_scan (a : Rat) (values : Vector n) (initial : Rat := 0) : Rat :=
+  scan (fun state x => a * state + x) values initial
 
-def ssm_chunk_carry (n : Nat) (α : Rat) (updates : List (Matrix hidden hidden)) :
-    Nat → Matrix hidden hidden
-  | 0 => fun _ _ => 0
-  | c + 1 => ssm_chunk α (tile n c updates)
-      (ssm_chunk_carry n α updates c)
+def ssm_state (a : Rat) (updates : Fin n → Matrix hidden hidden)
+    (incoming : Matrix hidden hidden := fun _ _ => 0) : Matrix hidden hidden :=
+  fun d j => ssm_scan a (fun t => updates t d j) (incoming d j)
 
-def chunkwise_ssm_layer (tiles n : Nat) (α : Rat)
-    (input : QKV (tiles * n) batch hidden) :
-    Sequence (tiles * n) batch hidden :=
-  let ⟨q, k, v⟩ := input
-  fun s b =>
-    let updates := fori fun t => (fun d j => k t b d * v t b j : Matrix hidden hidden)
-    let c := s.val / n
-    let incoming := ssm_chunk_carry n α updates c
-    let local_updates := (updates.drop (c * n)).take (s.val % n + 1)
-    (ssm_chunk α local_updates incoming).transpose.matvec (q.hidden s b)
+def ssm_layer (a : Rat) : Mixer seq hidden :=
+  fun input =>
+    let ⟨⟨q, k⟩, v⟩ := input
+    let updates := fun t => (fun d j => k t d * v t j : Matrix hidden hidden)
+    fun s => (ssm_state a (slice 0 (s.val + 1) (by omega) updates)).transpose.matvec (q s)
 
-private theorem scan_initial (α : Rat) (xs : List Rat) (z : Rat) :
-    xs.foldl (fun state x => α * state + x) z =
-      α ^ xs.length * z + xs.foldl (fun state x => α * state + x) 0 := by
-  induction xs generalizing z with
-  | nil => simp
-  | cons x xs ih =>
-      simp only [List.foldl_cons, List.length_cons, Rat.mul_zero, Rat.zero_add]
-      rw [ih (α * z + x), ih x]
-      simp [Rat.pow_succ, Rat.mul_add, Rat.mul_assoc, Rat.add_assoc]
 
-private theorem sum_mapIdx_zero (xs : List Rat) :
-    (xs.mapIdx fun _ _ => (0 : Rat)).sum = 0 := by
-  induction xs with
-  | nil => rfl
-  | cons x xs ih => simpa using ih
+-- By induction, show how each term is weighted.
+theorem scan_weighted (a : Rat) (values : Vector n) (z : Rat) :
+    ssm_scan a values z =
+      a ^ n * z + Vector.sum (fun t => a ^ (n - 1 - t.val) * values t) := by
+  induction n generalizing z with
+  | zero => simp [ssm_scan, scan, Vector.sum, fori]
+  | succ n ih =>
+      simp only [ssm_scan, scan, Fin.foldl_succ]
+      change ssm_scan a (fun i : Fin n => values i.succ) (a * z + values 0) = _
+      rw [ih, Vector.sum_succ]
+      simp [Nat.sub_sub, Nat.add_comm, Rat.pow_succ,
+        Rat.mul_add, Rat.mul_assoc, Rat.add_assoc]
 
-private theorem prefix_scan (α : Rat) (xs : List Rat) (s : Nat) (h : s < xs.length) :
-    (xs.take (s + 1)).foldl (fun state x => α * state + x) 0 =
-      (xs.mapIdx fun t x => (if t ≤ s then α ^ (s - t) else 0) * x).sum := by
-  induction xs generalizing s with
-  | nil => simp at h
-  | cons x xs ih =>
-      cases s with
-      | zero => simp [sum_mapIdx_zero]
-      | succ s =>
-          have hs : s < xs.length := by simpa using h
-          simp only [List.take_succ_cons, List.foldl_cons, Rat.mul_zero, Rat.zero_add]
-          rw [scan_initial, ih s hs]
-          simp [List.length_take, Nat.min_eq_left (by omega : s + 1 ≤ xs.length)]
+/-!
 
-private theorem scan_all_weighted (α : Rat) (xs : List Rat) :
-    ssm_scan α xs = (xs.mapIdx fun t x => α ^ (xs.length - 1 - t) * x).sum := by
-  cases xs with
-  | nil => rfl
-  | cons x xs =>
-      have h := prefix_scan α (x :: xs) xs.length (by simp)
-      simp only [List.length_cons, Nat.add_sub_cancel] at h ⊢
-      calc
-        ssm_scan α (x :: xs) =
-            ((x :: xs).mapIdx fun t x => (if t ≤ xs.length then α ^ (xs.length - t) else 0) * x).sum := by
-          have take : (x :: xs).take (xs.length + 1) = x :: xs :=
-            List.take_length (l := x :: xs)
-          simpa only [ssm_scan, take] using h
-        _ = ((x :: xs).mapIdx fun t x => α ^ (xs.length - t) * x).sum := by
-          apply congrArg List.sum
-          apply List.ext_getElem
-          · simp
-          · intro t ht ht'
-            have bound : t ≤ xs.length := by simp only [List.length_mapIdx, List.length_cons] at ht; omega
-            simp only [List.getElem_mapIdx, if_pos bound]
 
-set_option backward.isDefEq.respectTransparency false in
-theorem ssm_chunk_eq (α : Rat) (updates : List (Matrix hidden hidden))
-    (incoming : Matrix hidden hidden) (d j : Fin hidden) :
-    ssm_chunk α updates incoming d j =
-      (updates.map fun update => update d j).foldl (fun state x => α * state + x)
-        (incoming d j) := by
-  rw [scan_initial]
-  simp only [ssm_chunk, List.length_map]
-  congr 1
-  rw [← ssm_scan, scan_all_weighted]
-  congr 1
-  apply List.ext_getElem
-  · simp
-  · intro t ht ht'
-    simp
+Unlike vanilla attention, state space models clearly induce an ordering on the sequence
+in the multiplicative term `a`. However in the special case where that term is 1 and
+we use a bidirectional SSM, we can show that the permutation equivariance remains.
 
-private theorem take_split (xs : List a) (start count : Nat) :
-    xs.take (start + count) = xs.take start ++ (xs.drop start).take count := by
-  induction start generalizing xs with
-  | zero => simp
-  | succ start ih =>
-      cases xs with
-      | nil => simp
-      | cons x xs => simpa [Nat.succ_add] using congrArg (List.cons x) (ih xs)
+-/
 
-set_option backward.isDefEq.respectTransparency false in
-theorem ssm_chunk_resume (α : Rat) (updates : List (Matrix hidden hidden))
-    (start count : Nat) :
-    ssm_chunk α ((updates.drop start).take count) (ssm_state α (updates.take start)) =
-      ssm_state α (updates.take (start + count)) := by
-  funext d j
-  rw [ssm_chunk_eq, take_split]
-  simp only [ssm_state, ssm_scan, List.map_append, List.foldl_append]
+def bidirectional_ssm_scan (a : Rat) (values : Vector n) : Vector n :=
+  fun s =>
+    let suffix := slice s.val (n - s.val) (by omega) values
+    ssm_scan a (slice 0 (s.val + 1) (by omega) values) +
+      ssm_scan a (fun t => suffix t.rev)
 
-theorem ssm_chunk_carry_eq (n : Nat) (α : Rat) (updates : List (Matrix hidden hidden))
-    (c : Nat) :
-    ssm_chunk_carry n α updates c = ssm_state α (updates.take (c * n)) := by
-  induction c with
-  | zero =>
-      funext d j
-      simp [ssm_chunk_carry, ssm_state, ssm_scan]
-  | succ c ih =>
-      rw [ssm_chunk_carry, tile, ih, ssm_chunk_resume, Nat.succ_mul]
+def bidirectional_ssm_layer (α : Rat) : Mixer seq hidden :=
+  fun input =>
+    let ⟨⟨q, k⟩, v⟩ := input
+    fun s =>
+      let state : Matrix hidden hidden := fun d j =>
+        bidirectional_ssm_scan α (fun t => k t d * v t j) s
+      state.transpose.matvec (q s)
 
-set_option backward.isDefEq.respectTransparency false in
-theorem chunkwise_ssm_layer_eq (tiles n : Nat) (α : Rat)
-    (input : QKV (tiles * n) batch hidden) :
-    chunkwise_ssm_layer tiles n α input = ssm_layer α input := by
-  funext s b
-  simp only [chunkwise_ssm_layer, ssm_chunk_carry_eq, ssm_layer]
-  rw [ssm_chunk_resume]
+theorem bidirectional_scan_one (f : Vector n) (s : Fin n) :
+    bidirectional_ssm_scan 1 f s = f.sum + f s := by
+  dsimp [Vector] at f
+  have one_pow (m : Nat) : (1 : Rat) ^ m = 1 := by
+    induction m <;> simp_all [Rat.pow_succ]
+  simp only [bidirectional_ssm_scan, scan_weighted, one_pow,
+    Rat.one_mul, Rat.mul_zero, Rat.zero_add]
+  rw [Vector.sum_rev]
+  rw [show Vector.sum (slice 0 (s.val + 1) (by omega) f) =
+    Vector.sum (slice 0 s.val (by omega) f) + f s by
+      exact Vector.sum_last (slice 0 (s.val + 1) (by omega) f)]
+  have split := Vector.sum_split (values := fun t : Fin (s.val + (n - s.val)) => f ⟨t.val, by omega⟩)
+  have total : Vector.sum (fun t : Fin (s.val + (n - s.val)) => f ⟨t.val, by omega⟩) = Vector.sum f := by
+    have full (m : Nat) (h : m = n) : Vector.sum (slice 0 m (by omega) f) = Vector.sum f := by
+      subst m
+      rfl
+    exact full _ (by omega)
+  rw [total] at split
+  have split' : Vector.sum (slice 0 s.val (by omega) f) +
+      Vector.sum (slice s.val (n - s.val) (by omega) f) = Vector.sum f := by
+    simpa [Vector.sum, slice, select, Nat.add_comm] using split
+  grind
+
+theorem bidirectional_ssm_layer_permute :
+    PermuteEquivariant (bidirectional_ssm_layer (seq := seq) (hidden := hidden) 1)
+      permute_qkv := by
+  intro π input
+  rcases input with ⟨⟨q, k⟩, v⟩
+  funext s j
+  apply congrArg Vector.sum
+  funext d
+  change bidirectional_ssm_scan 1 (fun t => k (π.index t) d * v (π.index t) j) s *
+      q (π.index s) d =
+    bidirectional_ssm_scan 1 (fun t => k t d * v t j) (π.index s) * q (π.index s) d
+  rw [bidirectional_scan_one, bidirectional_scan_one]
+  exact congrArg (fun total => (total + k (π.index s) d * v (π.index s) j) * q (π.index s) d)
+    (permute_sum π (fun t => k t d * v t j))
+
+/-!
+
+
+These models also have the property that we can chunk them into groups which can be computed separately.
+Here we consider a simplified version of chunking in order to distribute across machines.
+
+![Equal-size chunks pass a carry between boundaries; each position combines the decayed incoming state with its local weighted updates.](site/diagrams/chunkwise-ssm.svg)
+
+-/
+
+
+
+def ssm_chunk (a : Rat) (values : Vector n) (incoming : Rat) : Rat :=
+  a ^ n * incoming + Vector.sum (fun t => a ^ (n - 1 - t.val) * values t)
+
+def ssm_chunk_carry (tiles n : Nat) (a : Rat) (values : Vector (tiles * n)) : Rat :=
+  scan (fun state values => ssm_chunk a values state) (tile n values) 0
+
+def chunkwise_ssm_layer (tiles n : Nat) (a : Rat) : Mixer (tiles * n) hidden :=
+  fun input =>
+    let ⟨⟨q, k⟩, v⟩ := input
+    fun s =>
+      let start := s.val / n * n
+      let state : Matrix hidden hidden := fun d j =>
+        let updates : Vector (tiles * n) := fun t => k t d * v t j
+        let incoming := ssm_chunk_carry (s.val / n) n a (slice 0 start (by
+          have := Nat.div_add_mod' s.val n
+          omega) updates)
+        ssm_chunk a (slice start (s.val % n + 1) (by
+          have := Nat.div_add_mod' s.val n
+          omega) updates) incoming
+      state.transpose.matvec (q s)
+
+/-!
+
+We can prove that this yields the same result as our simple implementation.
+
+-/
+
+theorem ssm_chunk_carry_eq (tiles n : Nat) (a : Rat) (values : Vector (tiles * n)) :
+    ssm_chunk_carry tiles n a values = ssm_scan a values := by
+  simp only [ssm_chunk_carry, ssm_chunk, ← scan_weighted, ssm_scan]
+  exact tile_fold_eq tiles n _ values 0
+
+theorem chunkwise_ssm_layer_eq (tiles n : Nat) (a : Rat)
+    (input : (Matrix (tiles * n) hidden × Matrix (tiles * n) hidden) × Matrix (tiles * n) hidden) :
+    chunkwise_ssm_layer tiles n a input = ssm_layer a input := by
+  rcases input with ⟨⟨q, k⟩, v⟩
+  funext s j
+  apply congrArg Vector.sum
+  funext d
+  let updates : Vector (tiles * n) := fun t => k t d * v t j
+  have bound : s.val / n * n + (s.val % n + 1) ≤ tiles * n := by
+    have := Nat.div_add_mod' s.val n
+    omega
+  change ssm_chunk a (slice (s.val / n * n) (s.val % n + 1) bound updates)
+    (ssm_chunk_carry (s.val / n) n a (slice 0 (s.val / n * n) (by omega) updates)) * q s d =
+      ssm_scan a (slice 0 (s.val + 1) (by omega) updates) * q s d
+  apply congrArg (fun state => state * q s d)
+  rw [ssm_chunk_carry_eq]
+  change (a ^ _ * _ + _) = _
+  rw [← scan_weighted]
+  change scan (fun state x => a * state + x) _ (scan (fun state x => a * state + x) _ 0) = _
+  rw [scan_slice]
   have offset : s.val / n * n + (s.val % n + 1) = s.val + 1 := by
     have := Nat.div_add_mod' s.val n
     omega
-  rw [offset]
+  exact scan_full _ (slice 0 (s.val + 1) (by omega) updates) 0 offset
 
-theorem chunkwise_transformer_eq (tiles n : Nat) (α : Rat)
-    (blocks : Params hidden) (input : Sequence (tiles * n) batch hidden) :
-    transformer (chunkwise_ssm_layer tiles n α) blocks input =
-      transformer (ssm_layer α) blocks input := by
-  induction blocks generalizing input with
-  | nil => rfl
-  | cons block rest ih =>
-      change transformer (chunkwise_ssm_layer tiles n α) rest
-        (chunkwise_ssm_layer tiles n α (project_qkv (sequence_layer input block.weight) block.wq block.wk block.wv)) = _
-      rw [chunkwise_ssm_layer_eq, ih]
-      rfl
 
-#eval
-  let input := project_qkv (Examples.ramp 6) Examples.one Examples.one Examples.one
-  [chunkwise_ssm_layer 6 1 (1 / 2) input,
-    chunkwise_ssm_layer 3 2 (1 / 2) input,
-    chunkwise_ssm_layer 1 6 (1 / 2) input]
+/-!
 
-#eval
-  let input : Sequence 6 2 2 :=
-    fun s b j => (s.val : Rat) / 2 + (b.val : Rat) - (j.val : Rat)
-  let wq : Matrix 2 2 := fun d j => if d = j then 1 else -1
-  let wk : Matrix 2 2 := fun d j => (d.val : Rat) + (j.val : Rat) + 1
-  let wv : Matrix 2 2 := fun d j => if d = j then 2 else 1
-  let entries := fun (x : Sequence 6 2 2) => fori fun s => fori fun b => fori (x.hidden s b)
-  [-1, 0, 1 / 2, 1, 2].map fun α =>
-    let expected := entries (ssm_layer α (project_qkv input wq wk wv))
-    [entries (chunkwise_ssm_layer 6 1 α (project_qkv input wq wk wv)) == expected,
-      entries (chunkwise_ssm_layer 3 2 α (project_qkv input wq wk wv)) == expected,
-      entries (chunkwise_ssm_layer 1 6 α (project_qkv input wq wk wv)) == expected]
+
+# Conclusion
+
+
+This blog considered the use of Lean as a method to prove some elementary properties about Transformers and related models.
+There are many additional things one might consider here including bounding errors introduced from quantization, aggregation, backpropagation,
+and training-inference mismatch. Additionally, there are likely many ways to simplify these proofs or develop libraries to make them more minimal.
+
+At a high level though, the main change is not the machinery for proving these properties, it is the ease with which a person can specify "what" they want to be
+proven and receive a certificate that a property is true. Understanding how that interface should work and how it can be used will be an extremely interesting challenge over the next year.
+
+
+-/
+
 
 end TensorPuzzles

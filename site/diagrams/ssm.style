@@ -1,0 +1,102 @@
+forall Matrix `u0`; Matrix `s0`; Matrix `u1`; Matrix `s1`; Matrix `u2`; Matrix `s2`; Note `initial`; Note `decay0`; Note `decay1`; Note `rec`; Note `masklabel`; Note `mask`; Note `parallel`; Note `chunk`; Note `local`; Note `size`; Note `readout` {
+  override `u0`.box.center = (-240, 162)
+  override `u0`.box.width = 108
+  override `u0`.box.height = 44
+  override `u0`.box.fillColor = theme.blue
+  override `u0`.text.fontSize = "24px"
+  override `s0`.box.center = (-240, 64)
+  override `s0`.box.width = 145
+  override `s0`.box.height = 58
+  override `s0`.box.fillColor = theme.paper
+  override `s0`.text.fontSize = "26px"
+  override `u1`.box.center = (0, 162)
+  override `u1`.box.width = 108
+  override `u1`.box.height = 44
+  override `u1`.box.fillColor = theme.amber
+  override `u1`.text.fontSize = "24px"
+  override `s1`.box.center = (0, 64)
+  override `s1`.box.width = 145
+  override `s1`.box.height = 58
+  override `s1`.box.fillColor = theme.paper
+  override `s1`.text.fontSize = "26px"
+  override `u2`.box.center = (240, 162)
+  override `u2`.box.width = 108
+  override `u2`.box.height = 44
+  override `u2`.box.fillColor = theme.blue
+  override `u2`.text.fontSize = "24px"
+  override `s2`.box.center = (240, 64)
+  override `s2`.box.width = 145
+  override `s2`.box.height = 58
+  override `s2`.box.fillColor = theme.paper
+  override `s2`.text.fontSize = "26px"
+  override `initial`.text.center = (-400, 64)
+  override `initial`.text.fontSize = "24px"
+  override `decay0`.text.center = (-120, 86)
+  override `decay0`.text.fontSize = "24px"
+  override `decay1`.text.center = (120, 86)
+  override `decay1`.text.fontSize = "24px"
+  override `rec`.text.center = (0, 215)
+  override `rec`.text.fontSize = "25px"
+  override `masklabel`.text.center = (-365, -93)
+  override `masklabel`.text.fontSize = "26px"
+  override `mask`.text.center = (-245, -93)
+  override `mask`.text.fontSize = "25px"
+  override `parallel`.text.center = (-245, -189)
+  override `parallel`.text.fontSize = "25px"
+  override `chunk`.text.center = (215, -60)
+  override `chunk`.text.fontSize = "25px"
+  override `local`.text.center = (215, -111)
+  override `local`.text.fontSize = "25px"
+  override `size`.text.center = (215, -165)
+  override `size`.text.fontSize = "20px"
+  override `readout`.text.center = (0, -238)
+  override `readout`.text.fontSize = "23px"
+  shape line0 = Line {
+    start: (-240, 128)
+    end: (-240, 106)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line1 = Line {
+    start: (0, 128)
+    end: (0, 106)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line2 = Line {
+    start: (240, 128)
+    end: (240, 106)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line3 = Line {
+    start: (-375, 64)
+    end: (-325, 64)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line4 = Line {
+    start: (-155, 64)
+    end: (-85, 64)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line5 = Line {
+    start: (85, 64)
+    end: (155, 64)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line6 = Line {
+    start: (-410, 4)
+    end: (410, 4)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+  }
+}

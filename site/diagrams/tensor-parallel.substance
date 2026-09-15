@@ -1,26 +1,25 @@
 Matrix a1, a2, b1, b2, c1, c2, result
-Note title, lane1, lane2, times1, times2, plus, formula
+Note lane1, lane2, times1, times2, plus, formula
 Note adim1, adim2, bdim1, bdim2, cdim1, cdim2, rdim
-Label a1 "A₁"
-Label a2 "A₂"
-Label b1 "B₁"
-Label b2 "B₂"
-Label c1 "C₁"
-Label c2 "C₂"
-Label result "C"
-Label title "A = [A₁  A₂]     B = [B₁; B₂]"
+Label a1 $A_1$
+Label a2 $A_2$
+Label b1 $B_1$
+Label b2 $B_2$
+Label c1 $C_1$
+Label c2 $C_2$
+Label result $C$
 Label lane1 "DEVICE 1"
 Label lane2 "DEVICE 2"
-Label times1 "×"
-Label times2 "×"
-Label plus "+"
-Label formula "AB = A₁B₁ + A₂B₂"
-Label adim1 "n × k"
-Label adim2 "n × k"
-Label bdim1 "k × p"
-Label bdim2 "k × p"
-Label cdim1 "n × p"
-Label cdim2 "n × p"
-Label rdim "n × p"
+Label times1 $\times$
+Label times2 $\times$
+Label plus $+$
+Label formula $AB=A_1B_1+A_2B_2$
+Label adim1 $n\times k$
+Label adim2 $n\times k$
+Label bdim1 $k\times p$
+Label bdim2 $k\times p$
+Label cdim1 $n\times p$
+Label cdim2 $n\times p$
+Label rdim $n\times p$
 Flow(b1, c1)
 Flow(b2, c2)

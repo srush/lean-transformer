@@ -1,0 +1,57 @@
+forall Matrix `tile0`; Matrix `tile1`; Matrix `tile2`; Note `zero`; Note `carry1`; Note `carry2`; Note `carry3`; Note `shape`; Note `next`; Note `state`; Note `output` {
+  override `tile0`.box.center = (-270, 100)
+  override `tile1`.box.center = (0, 100)
+  override `tile2`.box.center = (270, 100)
+  override `tile0`.box.width = 210
+  override `tile1`.box.width = 210
+  override `tile2`.box.width = 210
+  override `tile0`.box.height = 76
+  override `tile1`.box.height = 76
+  override `tile2`.box.height = 76
+  override `tile0`.box.fillColor = theme.blue
+  override `tile1`.box.fillColor = theme.amber
+  override `tile2`.box.fillColor = theme.blue
+  override `tile0`.text.fontSize = "23px"
+  override `tile1`.text.fontSize = "23px"
+  override `tile2`.text.fontSize = "23px"
+  override `zero`.text.center = (-430, 100)
+  override `carry1`.text.center = (-135, 130)
+  override `carry2`.text.center = (135, 130)
+  override `carry3`.text.center = (430, 100)
+  override `shape`.text.center = (0, 185)
+  override `shape`.text.fontSize = "22px"
+  override `next`.text.center = (0, -26)
+  override `next`.text.fontSize = "25px"
+  override `state`.text.center = (0, -118)
+  override `state`.text.fontSize = "25px"
+  override `output`.text.center = (0, -209)
+  override `output`.text.fontSize = "24px"
+  shape initial = Line {
+    start: (-412, 100)
+    end: (-388, 100)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape first = Line {
+    start: (-155, 100)
+    end: (-116, 100)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape second = Line {
+    start: (116, 100)
+    end: (155, 100)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape last = Line {
+    start: (388, 100)
+    end: (412, 100)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

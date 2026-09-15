@@ -1,4 +1,4 @@
-forall Matrix `x1`; Matrix `f1`; Matrix `l1`; Matrix `x2`; Matrix `f2`; Matrix `l2`; Matrix `total`; Note `title`; Note `device1`; Note `device2`; Note `dim1`; Note `dim2`; Note `net1`; Note `net2`; Note `loss1`; Note `loss2`; Note `plus`; Note `scalar`; Note `formula` {
+forall Matrix `x1`; Matrix `f1`; Matrix `l1`; Matrix `x2`; Matrix `f2`; Matrix `l2`; Matrix `total`; Note `device1`; Note `device2`; Note `dim1`; Note `dim2`; Note `net1`; Note `net2`; Note `loss1`; Note `loss2`; Note `plus`; Note `scalar`; Note `formula` {
   override `x1`.box.center = (-340, 55)
   override `x1`.box.fillColor = theme.blue
   override `x1`.box.width = 112
@@ -27,8 +27,6 @@ forall Matrix `x1`; Matrix `f1`; Matrix `l1`; Matrix `x2`; Matrix `f2`; Matrix `
   override `total`.box.fillColor = theme.paper
   override `total`.box.width = 112
   override `total`.box.height = 72
-  override `title`.text.center = (0, 200)
-  override `title`.text.fontSize = "25px"
   override `device1`.text.center = (-270, 125)
   override `device1`.text.fontSize = "16px"
   override `device2`.text.center = (-270, -45)

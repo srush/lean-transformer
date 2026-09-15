@@ -6,7 +6,6 @@ Matrix pa2
 Matrix pa1
 Matrix pc2
 Matrix pc1
-Note title
 Note a
 Note c
 Note mul1
@@ -14,19 +13,18 @@ Note mul2
 Note left
 Note right
 Note formula
-Label a1 "a₁"
-Label a2 "a₂"
-Label c1 "a₁B"
-Label c2 "a₂B"
-Label pa2 "a₂"
-Label pa1 "a₁"
-Label pc2 "a₂B"
-Label pc1 "a₁B"
-Label title "The same row permutation, before or after matmul"
-Label a "A"
-Label c "AB"
-Label mul1 "× B"
-Label mul2 "× B"
-Label left "permute π"
-Label right "permute π"
-Label formula "(permute π A) B = permute π (AB)"
+Label a1 $a_1$
+Label a2 $a_2$
+Label c1 $a_1B$
+Label c2 $a_2B$
+Label pa2 $a_2$
+Label pa1 $a_1$
+Label pc2 $a_2B$
+Label pc1 $a_1B$
+Label a $A$
+Label c $AB$
+Label mul1 $\times B$
+Label mul2 $\times B$
+Label left $\operatorname{permute}\pi$
+Label right $\operatorname{permute}\pi$
+Label formula $(\operatorname{permute}\pi\ A)B=\operatorname{permute}\pi\ (AB)$

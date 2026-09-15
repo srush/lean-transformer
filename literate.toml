@@ -1,14 +1,15 @@
 landing_page = "Tensors"
 extra_css = ["site/tufte.css", "site/verso-tufte.css"]
+extra_js = ["site/contents.js"]
 hide_commands = ["import", "set_option", "namespace", "end"]
 show_imports = false
 
 [metadata]
-title = "Minimal rational vectors"
+title = "Lean for Transformers: Invariants"
 description = "Rational vectors, sequence models, and verified parallelism in Lean."
 
 [[targets]]
 module = "Tensors"
 
 [modules.Tensors]
-title = "Minimal rational vectors"
+title = "Lean for Transformers: Invariants"

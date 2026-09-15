@@ -1,0 +1,22 @@
+Matrix tile0
+Matrix tile1
+Matrix tile2
+Note zero
+Note carry1
+Note carry2
+Note carry3
+Note shape
+Note next
+Note state
+Note output
+Label tile0 $U_0,\ldots,U_{n-1}$
+Label tile1 $U_n,\ldots,U_{2n-1}$
+Label tile2 $U_{2n},\ldots,U_{3n-1}$
+Label zero $0$
+Label carry1 $C_1$
+Label carry2 $C_2$
+Label carry3 $C_3$
+Label shape $\text{each chunk: }n\text{ updates}\qquad C_0=0$
+Label next $C_{c+1}=\alpha^n C_c+\sum_{t=0}^{n-1}\alpha^{n-1-t}U_{cn+t}$
+Label state $S_{cn+r}=\alpha^{r+1}C_c+\sum_{t=0}^{r}\alpha^{r-t}U_{cn+t}\quad(0\le r<n)$
+Label output $o_{cn+r}=q_{cn+r}^{\top}S_{cn+r}\qquad U_t=k_t v_t^{\top}$

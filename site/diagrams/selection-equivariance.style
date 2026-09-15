@@ -1,0 +1,114 @@
+forall Matrix `x0`; Matrix `y0`; Matrix `x1`; Matrix `y1`; Matrix `x2`; Matrix `y2`; Matrix `x3`; Matrix `y3`; Matrix `xs0`; Matrix `ys0`; Matrix `xs1`; Matrix `ys1`; Matrix `xs2`; Matrix `ys2`; Note `fn`; Note `fn2`; Note `selectL`; Note `selectR`; Note `sizes`; Note `indices`; Note `eq` {
+  override `x0`.box.center = (-285, 145)
+  override `x0`.box.width = 150
+  override `x0`.box.height = 30
+  override `x0`.box.fillColor = theme.blue
+  override `x0`.text.fontSize = "24px"
+  override `y0`.box.center = (285, 145)
+  override `y0`.box.width = 150
+  override `y0`.box.height = 30
+  override `y0`.box.fillColor = theme.blue
+  override `y0`.text.fontSize = "24px"
+  override `x1`.box.center = (-285, 115)
+  override `x1`.box.width = 150
+  override `x1`.box.height = 30
+  override `x1`.box.fillColor = theme.paper
+  override `x1`.text.fontSize = "24px"
+  override `y1`.box.center = (285, 115)
+  override `y1`.box.width = 150
+  override `y1`.box.height = 30
+  override `y1`.box.fillColor = theme.paper
+  override `y1`.text.fontSize = "24px"
+  override `x2`.box.center = (-285, 85)
+  override `x2`.box.width = 150
+  override `x2`.box.height = 30
+  override `x2`.box.fillColor = theme.amber
+  override `x2`.text.fontSize = "24px"
+  override `y2`.box.center = (285, 85)
+  override `y2`.box.width = 150
+  override `y2`.box.height = 30
+  override `y2`.box.fillColor = theme.amber
+  override `y2`.text.fontSize = "24px"
+  override `x3`.box.center = (-285, 55)
+  override `x3`.box.width = 150
+  override `x3`.box.height = 30
+  override `x3`.box.fillColor = theme.paper
+  override `x3`.text.fontSize = "24px"
+  override `y3`.box.center = (285, 55)
+  override `y3`.box.width = 150
+  override `y3`.box.height = 30
+  override `y3`.box.fillColor = theme.paper
+  override `y3`.text.fontSize = "24px"
+  override `xs0`.box.center = (-285, -57)
+  override `xs0`.box.width = 150
+  override `xs0`.box.height = 32
+  override `xs0`.box.fillColor = theme.amber
+  override `xs0`.text.fontSize = "24px"
+  override `ys0`.box.center = (285, -57)
+  override `ys0`.box.width = 150
+  override `ys0`.box.height = 32
+  override `ys0`.box.fillColor = theme.amber
+  override `ys0`.text.fontSize = "24px"
+  override `xs1`.box.center = (-285, -89)
+  override `xs1`.box.width = 150
+  override `xs1`.box.height = 32
+  override `xs1`.box.fillColor = theme.blue
+  override `xs1`.text.fontSize = "24px"
+  override `ys1`.box.center = (285, -89)
+  override `ys1`.box.width = 150
+  override `ys1`.box.height = 32
+  override `ys1`.box.fillColor = theme.blue
+  override `ys1`.text.fontSize = "24px"
+  override `xs2`.box.center = (-285, -121)
+  override `xs2`.box.width = 150
+  override `xs2`.box.height = 32
+  override `xs2`.box.fillColor = theme.amber
+  override `xs2`.text.fontSize = "24px"
+  override `ys2`.box.center = (285, -121)
+  override `ys2`.box.width = 150
+  override `ys2`.box.height = 32
+  override `ys2`.box.fillColor = theme.amber
+  override `ys2`.text.fontSize = "24px"
+  override `fn`.text.center = (0, 122)
+  override `fn`.text.fontSize = "28px"
+  override `fn2`.text.center = (0, -67)
+  override `fn2`.text.fontSize = "28px"
+  override `selectL`.text.center = (-380, -6)
+  override `selectL`.text.fontSize = "20px"
+  override `selectR`.text.center = (380, -6)
+  override `selectR`.text.fontSize = "20px"
+  override `sizes`.text.center = (0, 27)
+  override `sizes`.text.fontSize = "22px"
+  override `indices`.text.center = (0, -10)
+  override `indices`.text.fontSize = "23px"
+  override `eq`.text.center = (0, -216)
+  override `eq`.text.fontSize = "25px"
+  shape line0 = Line {
+    start: (-194, 100)
+    end: (194, 100)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line1 = Line {
+    start: (-194, -89)
+    end: (194, -89)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line2 = Line {
+    start: (-285, 30)
+    end: (-285, -31)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line3 = Line {
+    start: (285, 30)
+    end: (285, -31)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

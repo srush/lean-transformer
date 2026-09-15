@@ -1,0 +1,36 @@
+Matrix ex
+Matrix ey
+Matrix etx
+Matrix ety
+Matrix ix
+Matrix iy
+Matrix itx
+Matrix ity
+Note ef1
+Note ef2
+Note if1
+Note if2
+Note eT
+Note eS
+Note iT
+Note iS
+Note eformula
+Note iformula
+Label ex $x$
+Label ey $f(x)$
+Label etx $T(x)$
+Label ety $S(f(x))$
+Label ix $x$
+Label iy $f(x)$
+Label itx $T(x)$
+Label ity $f(x)$
+Label ef1 $f$
+Label ef2 $f$
+Label if1 $f$
+Label if2 $f$
+Label eT $T$
+Label eS $S$
+Label iT $T$
+Label iS $\mathrm{id}$
+Label eformula $f(T(x)) = S(f(x))$
+Label iformula $f(T(x)) = f(x)$

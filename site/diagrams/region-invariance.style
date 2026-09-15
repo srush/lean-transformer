@@ -1,0 +1,130 @@
+forall Matrix `r0c0`; Matrix `r0c1`; Matrix `r0c2`; Matrix `r0c3`; Matrix `r0c4`; Matrix `r0c5`; Matrix `r0c6`; Matrix `r1c0`; Matrix `r1c1`; Matrix `r1c2`; Matrix `r1c3`; Matrix `r1c4`; Matrix `r1c5`; Matrix `r1c6`; Matrix `out0`; Matrix `out1`; Note `window`; Note `x`; Note `other`; Note `center`; Note `fa`; Note `fb`; Note `outside`; Note `eq` {
+  override `r0c0`.box.center = (-240, 80)
+  override `r0c0`.box.width = 62
+  override `r0c0`.box.height = 58
+  override `r0c0`.box.fillColor = theme.amber
+  override `r0c0`.text.fontSize = "25px"
+  override `r0c1`.box.center = (-175, 80)
+  override `r0c1`.box.width = 62
+  override `r0c1`.box.height = 58
+  override `r0c1`.box.fillColor = theme.amber
+  override `r0c1`.text.fontSize = "25px"
+  override `r0c2`.box.center = (-110, 80)
+  override `r0c2`.box.width = 62
+  override `r0c2`.box.height = 58
+  override `r0c2`.box.fillColor = theme.blue
+  override `r0c2`.text.fontSize = "25px"
+  override `r0c3`.box.center = (-45, 80)
+  override `r0c3`.box.width = 62
+  override `r0c3`.box.height = 58
+  override `r0c3`.box.fillColor = theme.blue
+  override `r0c3`.text.fontSize = "25px"
+  override `r0c4`.box.center = (20, 80)
+  override `r0c4`.box.width = 62
+  override `r0c4`.box.height = 58
+  override `r0c4`.box.fillColor = theme.blue
+  override `r0c4`.text.fontSize = "25px"
+  override `r0c5`.box.center = (85, 80)
+  override `r0c5`.box.width = 62
+  override `r0c5`.box.height = 58
+  override `r0c5`.box.fillColor = theme.amber
+  override `r0c5`.text.fontSize = "25px"
+  override `r0c6`.box.center = (150, 80)
+  override `r0c6`.box.width = 62
+  override `r0c6`.box.height = 58
+  override `r0c6`.box.fillColor = theme.amber
+  override `r0c6`.text.fontSize = "25px"
+  override `r1c0`.box.center = (-240, -70)
+  override `r1c0`.box.width = 62
+  override `r1c0`.box.height = 58
+  override `r1c0`.box.fillColor = theme.amber
+  override `r1c0`.text.fontSize = "25px"
+  override `r1c1`.box.center = (-175, -70)
+  override `r1c1`.box.width = 62
+  override `r1c1`.box.height = 58
+  override `r1c1`.box.fillColor = theme.amber
+  override `r1c1`.text.fontSize = "25px"
+  override `r1c2`.box.center = (-110, -70)
+  override `r1c2`.box.width = 62
+  override `r1c2`.box.height = 58
+  override `r1c2`.box.fillColor = theme.blue
+  override `r1c2`.text.fontSize = "25px"
+  override `r1c3`.box.center = (-45, -70)
+  override `r1c3`.box.width = 62
+  override `r1c3`.box.height = 58
+  override `r1c3`.box.fillColor = theme.blue
+  override `r1c3`.text.fontSize = "25px"
+  override `r1c4`.box.center = (20, -70)
+  override `r1c4`.box.width = 62
+  override `r1c4`.box.height = 58
+  override `r1c4`.box.fillColor = theme.blue
+  override `r1c4`.text.fontSize = "25px"
+  override `r1c5`.box.center = (85, -70)
+  override `r1c5`.box.width = 62
+  override `r1c5`.box.height = 58
+  override `r1c5`.box.fillColor = theme.amber
+  override `r1c5`.text.fontSize = "25px"
+  override `r1c6`.box.center = (150, -70)
+  override `r1c6`.box.width = 62
+  override `r1c6`.box.height = 58
+  override `r1c6`.box.fillColor = theme.amber
+  override `r1c6`.text.fontSize = "25px"
+  override `out0`.box.center = (355, 80)
+  override `out0`.box.width = 96
+  override `out0`.box.height = 58
+  override `out0`.box.fillColor = theme.blue
+  override `out0`.text.fontSize = "24px"
+  override `out1`.box.center = (355, -70)
+  override `out1`.box.width = 96
+  override `out1`.box.height = 58
+  override `out1`.box.fillColor = theme.blue
+  override `out1`.text.fontSize = "24px"
+  override `window`.text.center = (-45, 146)
+  override `window`.text.fontSize = "20px"
+  override `x`.text.center = (-365, 80)
+  override `x`.text.fontSize = "28px"
+  override `other`.text.center = (-365, -70)
+  override `other`.text.fontSize = "28px"
+  override `center`.text.center = (-45, 25)
+  override `center`.text.fontSize = "20px"
+  override `fa`.text.center = (253, 119)
+  override `fa`.text.fontSize = "22px"
+  override `fb`.text.center = (253, -31)
+  override `fb`.text.fontSize = "22px"
+  override `outside`.text.center = (0, -150)
+  override `outside`.text.fontSize = "20px"
+  override `eq`.text.center = (0, -211)
+  override `eq`.text.fontSize = "23px"
+  shape line0 = Line {
+    start: (-142, 115)
+    end: (-142, 127)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+  }
+  shape line1 = Line {
+    start: (-142, 127)
+    end: (52, 127)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+  }
+  shape line2 = Line {
+    start: (52, 127)
+    end: (52, 115)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+  }
+  shape line3 = Line {
+    start: (194, 80)
+    end: (295, 80)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape line4 = Line {
+    start: (194, -70)
+    end: (295, -70)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

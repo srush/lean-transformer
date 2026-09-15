@@ -5,7 +5,6 @@ Matrix x2
 Matrix f2
 Matrix l2
 Matrix total
-Note title
 Note device1
 Note device2
 Note dim1
@@ -17,22 +16,21 @@ Note loss2
 Note plus
 Note scalar
 Note formula
-Label x1 "X₁"
-Label f1 "fθ"
-Label l1 "L₁"
-Label x2 "X₂"
-Label f2 "fθ"
-Label l2 "L₂"
-Label total "L"
-Label title "X = [X₁; X₂]     shared network parameters θ"
+Label x1 $X_1$
+Label f1 $f_{\theta}$
+Label l1 $L_1$
+Label x2 $X_2$
+Label f2 $f_{\theta}$
+Label l2 $L_2$
+Label total $L$
 Label device1 "DEVICE 1"
 Label device2 "DEVICE 2"
-Label dim1 "k × hidden"
-Label dim2 "k × hidden"
+Label dim1 $k\times\mathit{hidden}$
+Label dim2 $k\times\mathit{hidden}$
 Label net1 "neural network"
 Label net2 "neural network"
 Label loss1 "sum point_loss"
 Label loss2 "sum point_loss"
-Label plus "+"
+Label plus $+$
 Label scalar "scalar"
-Label formula "loss(fθ(X)) = L₁ + L₂"
+Label formula $\operatorname{loss}(f_{\theta}(X))=L_1+L_2$

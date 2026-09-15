@@ -1,0 +1,110 @@
+forall Matrix `ex`; Matrix `ey`; Matrix `etx`; Matrix `ety`; Matrix `ix`; Matrix `iy`; Matrix `itx`; Matrix `ity`; Note `ef1`; Note `ef2`; Note `if1`; Note `if2`; Note `eT`; Note `eS`; Note `iT`; Note `iS`; Note `eformula`; Note `iformula` {
+  override `ex`.box.center = (-345, 95)
+  override `ex`.box.fillColor = theme.blue
+  override `ex`.box.width = 120
+  override `ex`.box.height = 64
+  override `ey`.box.center = (-125, 95)
+  override `ey`.box.fillColor = theme.blue
+  override `ey`.box.width = 120
+  override `ey`.box.height = 64
+  override `etx`.box.center = (-345, -90)
+  override `etx`.box.fillColor = theme.amber
+  override `etx`.box.width = 120
+  override `etx`.box.height = 64
+  override `ety`.box.center = (-125, -90)
+  override `ety`.box.fillColor = theme.amber
+  override `ety`.box.width = 120
+  override `ety`.box.height = 64
+  override `ix`.box.center = (125, 95)
+  override `ix`.box.fillColor = theme.blue
+  override `ix`.box.width = 120
+  override `ix`.box.height = 64
+  override `iy`.box.center = (345, 95)
+  override `iy`.box.fillColor = theme.blue
+  override `iy`.box.width = 120
+  override `iy`.box.height = 64
+  override `itx`.box.center = (125, -90)
+  override `itx`.box.fillColor = theme.amber
+  override `itx`.box.width = 120
+  override `itx`.box.height = 64
+  override `ity`.box.center = (345, -90)
+  override `ity`.box.fillColor = theme.blue
+  override `ity`.box.width = 120
+  override `ity`.box.height = 64
+  override `ef1`.text.center = (-235, 125)
+  override `ef1`.text.fontSize = "25px"
+  override `ef2`.text.center = (-235, -60)
+  override `ef2`.text.fontSize = "25px"
+  override `if1`.text.center = (235, 125)
+  override `if1`.text.fontSize = "25px"
+  override `if2`.text.center = (235, -60)
+  override `if2`.text.fontSize = "25px"
+  override `eT`.text.center = (-372, 2)
+  override `eT`.text.fontSize = "23px"
+  override `eS`.text.center = (-95, 2)
+  override `eS`.text.fontSize = "23px"
+  override `iT`.text.center = (98, 2)
+  override `iT`.text.fontSize = "23px"
+  override `iS`.text.center = (393, 2)
+  override `iS`.text.fontSize = "19px"
+  override `eformula`.text.center = (-235, -185)
+  override `eformula`.text.fontSize = "24px"
+  override `iformula`.text.center = (235, -185)
+  override `iformula`.text.fontSize = "24px"
+  shape arrow0 = Line {
+    start: (-275, 95)
+    end: (-195, 95)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow1 = Line {
+    start: (-275, -90)
+    end: (-195, -90)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow2 = Line {
+    start: (-345, 51)
+    end: (-345, -46)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow3 = Line {
+    start: (-125, 51)
+    end: (-125, -46)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow4 = Line {
+    start: (195, 95)
+    end: (275, 95)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow5 = Line {
+    start: (195, -90)
+    end: (275, -90)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow6 = Line {
+    start: (125, 51)
+    end: (125, -46)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+  shape arrow7 = Line {
+    start: (345, 51)
+    end: (345, -46)
+    strokeColor: theme.muted
+    strokeWidth: 1.5
+    endArrowhead: "straight"
+  }
+}

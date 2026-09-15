@@ -31,8 +31,9 @@ use `open TensorPuzzles` from another file.
 
 - Shapes are enforced by types; arithmetic is exact rational arithmetic.
 - Matrix `+` and `*` are pointwise; `a.matmul b` is matrix multiplication.
-- `neural_network` takes a list of `NeuralLayer` parameters and applies ReLU
-  after every linear layer. An empty list is the identity.
+- `neural_network` takes a list of ordinary `α → α` functions with parameters already captured.
+  Use `weights.map (fun weight => forward weight)` for linear layers followed by ReLU.
+  The same executor stacks transformer blocks. An empty list is the identity.
 - `data_parallel_loss_correct` covers any such network and scorer on an even
   batch, retaining original batch indices when scoring either shard.
 - Equal-halves splitting uses a dimension written as `k + k` and returns two
@@ -63,8 +64,8 @@ use `open TensorPuzzles` from another file.
 - Full attention uses that rule; sliding-window attention uses raw dot products.
 - `linear_attention qkv` uses raw Q/K dot products without normalization.
   Its optional final mask defaults to all ones. Use
-  `fun qkv => linear_attention qkv` as a mixer with the default mask.
-- All layers are bias-free, including `NeuralLayer` and `sequence_layer`.
+  `vmap (fun qkv => linear_attention qkv)` to apply it to a batch of QKV inputs.
+- All layers are bias-free.
 - Both bidirectional SSM scans include the current input, counting it twice.
 - Parallel and tiled forms are mathematical models, not performance guarantees.
 
@@ -92,22 +93,32 @@ stylesheet from [DiffRast](https://srush.github.io/DiffRast/), with font URLs
 made absolute; `site/verso-tufte.css` adapts it to Verso's article structure.
 The ET Book fonts load from DiffRast, with local serif fallbacks when offline.
 Lean highlighting, declaration links, copy buttons, and proof hovers remain
-provided by Verso. This configures a local build, not automatic deployment.
+provided by Verso.
+
+## GitHub Pages
+
+Read the [published site](https://srush.github.io/lean-transformer/).
+The `Publish Verso to GitHub Pages` workflow builds and publishes the site on
+every push to `main`. It can also be run manually from the repository's Actions
+tab. GitHub Pages uses **GitHub Actions** as its deployment source.
 
 ## Simplified API and backups
 
-`project_qkv input wq wk wv` constructs one `QKV` input shared by all mixers.
-The transformer performs this projection; a `Mixer` is simply a function from
-this projected input to an output sequence.
+Attention operates on one sequence: `QKV seq hidden` contains three
+`Matrix seq hidden` values. `project_qkv input wq wk wv` projects an unbatched
+matrix. All mixers, including SWA, SSM, and chunkwise SSM, are batch-free.
+There is no `Sequence` type: a single input is `Matrix seq hidden`, and a batch
+is `Fin batch → Matrix seq hidden`. Apply `vmap` to run a model across examples.
 `ssm_layer α qkv` and `bidirectional_ssm_layer α qkv`
 scan a hidden-by-hidden matrix state:
 `Sₜ = α Sₜ₋₁ + kₜᵀ vₜ`, with output `qₜ Sₜ`.
 Use `α = 1` for the unweighted case. Compose layers with
-`sequence_loss` or `transformer_loss` directly instead of using a separate
-loss wrapper for every layer. The shared `transformer` takes a mixer function:
-`transformer attention_layer blocks input` for full attention,
-`transformer (swa radius) blocks input` for sliding-window attention, or
-`transformer (ssm_layer α) blocks input` for a forward SSM.
+`pooled_loss` or `transformer_loss` directly instead of using a separate
+loss wrapper for every layer. `transformer_block mixer block` implements one block;
+`neural_network` composes these blocks:
+`neural_network (blocks.map (transformer_block attention_layer)) input`.
+Use `swa radius` or `ssm_layer α` as the mixer for sliding-window attention
+or a forward SSM, respectively.
 Use `bidirectional_ssm_layer α` for bidirectional scans (the current update is counted twice).
 `transformer_loss` takes the same mixer as its first argument.
 At `α = 1`, an entire stack of
@@ -123,8 +134,9 @@ prefix and query. There is no token-by-token recurrence inside `ssm_chunk`.
 The input length is `tiles * n`: exactly `tiles` chunks of size `n`.
 The layer and transformer-stack equivalence theorems cover arbitrary rational
 parameters and equal-size chunks, including empty sequences. The layer theorem
-takes QKV directly. Use
-`transformer (chunkwise_ssm_layer tiles n α) blocks input` for the chunkwise mixer.
+takes `QKV (tiles * n) hidden` directly. Use
+`neural_network (blocks.map (transformer_block (chunkwise_ssm_layer tiles n α))) input`
+for the chunkwise mixer.
 This is an executable mathematical reference, not an optimized kernel: the current
 index-based carry function can recompute earlier chunk states across output queries.
 

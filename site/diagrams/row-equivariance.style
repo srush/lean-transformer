@@ -1,4 +1,4 @@
-forall Matrix `a1`; Matrix `a2`; Matrix `c1`; Matrix `c2`; Matrix `pa2`; Matrix `pa1`; Matrix `pc2`; Matrix `pc1`; Note `title`; Note `a`; Note `c`; Note `mul1`; Note `mul2`; Note `left`; Note `right`; Note `formula` {
+forall Matrix `a1`; Matrix `a2`; Matrix `c1`; Matrix `c2`; Matrix `pa2`; Matrix `pa1`; Matrix `pc2`; Matrix `pc1`; Note `a`; Note `c`; Note `mul1`; Note `mul2`; Note `left`; Note `right`; Note `formula` {
   override `a1`.box.center = (-245, 110)
   override `a1`.box.fillColor = theme.blue
   override `a1`.box.width = 160
@@ -31,8 +31,6 @@ forall Matrix `a1`; Matrix `a2`; Matrix `c1`; Matrix `c2`; Matrix `pa2`; Matrix 
   override `pc1`.box.fillColor = theme.blue
   override `pc1`.box.width = 160
   override `pc1`.box.height = 44
-  override `title`.text.center = (0, 210)
-  override `title`.text.fontSize = "25px"
   override `a`.text.center = (-245, 162)
   override `a`.text.fontSize = "25px"
   override `c`.text.center = (245, 162)
