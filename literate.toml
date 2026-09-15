@@ -1,4 +1,4 @@
-landing_page = "Tensors"
+landing_page = "Transformer"
 extra_css = ["site/tufte.css", "site/verso-tufte.css"]
 extra_js = ["site/contents.js"]
 hide_commands = ["import", "set_option", "namespace", "end"]
@@ -9,7 +9,7 @@ title = "Lean for Transformers: Invariants"
 description = "Rational vectors, sequence models, and verified parallelism in Lean."
 
 [[targets]]
-module = "Tensors"
+module = "Transformer"
 
-[modules.Tensors]
+[modules.Transformer]
 title = "Lean for Transformers: Invariants"

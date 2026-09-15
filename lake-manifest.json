@@ -51,6 +51,6 @@
    "inputRev": "main",
    "inherited": true,
    "configFile": "lakefile.lean"}],
- "name": "«minimal-tensors»",
+ "name": "Transformer",
  "lakeDir": ".lake",
  "fixedToolchain": false}

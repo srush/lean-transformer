@@ -13,7 +13,7 @@ import webbrowser
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / ".lake/build/literate-html"
-WATCHED = ["Tensors.lean", "literate.toml", "lakefile.toml",
+WATCHED = ["Transformer.lean", "literate.toml", "lakefile.toml",
            "lean-toolchain", "Makefile"]
 
 
@@ -96,8 +96,8 @@ def main():
         seen = fingerprint()
         build()
         threading.Thread(target=server.serve_forever, daemon=True).start()
-        url = f"http://127.0.0.1:{args.port}/Tensors/"
-        print(f"Watching Tensors.lean and site assets. Preview: {url}\nCtrl-C to stop.", flush=True)
+        url = f"http://127.0.0.1:{args.port}/Transformer/"
+        print(f"Watching Transformer.lean and site assets. Preview: {url}\nCtrl-C to stop.", flush=True)
         if args.open:
             webbrowser.open(url)
         while True:

@@ -2,7 +2,7 @@ import Std
 
 set_option doc.verso true
 
-namespace TensorPuzzles
+namespace Transformer
 
 
 /-!
@@ -11,17 +11,17 @@ namespace TensorPuzzles
 This post explores writing formally verified ML code in Lean.
 Since the cost of proofs is declining rapidly and the amount of code generated is skyrocketing,
 the value of verified code seems likely to climb.
-While understanding proofs remains challenging, collaborating with AI to get proofs of easy to understand
+While understanding proofs remains challenging, collaborating with AI to get proofs of easy-to-understand
 properties seems like a natural middle ground.
 
 The goal of this post is to verify foundational properties of Transformers.
-These are crtical properties that are used for
+These are critical properties that are used for
 parallelization and optimization, including tensor parallelism, data parallelism,
 batch invariance, permutation invariance, correctness of tiling, and locality of sparse attention models.
-The text, comments, and structure of the blog are all-human written;
+The text, comments, and structure of the blog are all human-written;
 the proofs are all written by AI. Hopefully it can also serve as an advanced intro to Lean.
 
-This project is inspired by [TorchLean](https://arxiv.org/abs/2602.22631), [Verified Deep Learning with Lean 4](https://lean.brettkoonce.com/blueprint/), and the [Dex Programming Language](https://github.com/google-research/dex-lang)
+This project is inspired by [TorchLean](https://arxiv.org/abs/2602.22631), [Verified Deep Learning with Lean 4](https://lean.brettkoonce.com/blueprint/), and the [Dex Programming Language](https://github.com/google-research/dex-lang).
 
 -/
 
@@ -39,7 +39,7 @@ Our goal will be to prove equivariances and invariances for specific architectur
 ![Equivariance transforms the output along with the input; invariance leaves the output unchanged.](site/diagrams/equivariance-invariance.svg)
 
 Notationally, ML definitions often assume the same functions can work on different input shapes, e.g. batch sizes.
-For this reason our Lean definition will be a bit complex to allow for functions that are polymorphic over the shape.
+For this reason, our Lean definition will be a bit complex to allow for functions that are polymorphic over the shape.
 
 -/
 
@@ -87,7 +87,7 @@ theorem relu_non_negative
 /-!
 
 
-Following the style of [Jax](https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html), we lift scalar functions to operate on vectors.
+Following the style of [JAX](https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html), we lift scalar functions to operate on vectors.
 Vectors (and tensors) are represented as higher-order functions mapping
 indices to rational numbers. This makes our proofs easier since we do not have to care
 about storage or efficiency.
@@ -129,8 +129,8 @@ instance : Mul (Vector n) where
 /-!
 
 
-For aggregations we define a vector scan.  Since we are using rationals for simplicity we do not have an
-exponential, so define a "softmax-like" non-linear normalization instead.
+For aggregations, we define a vector scan. Since we are using rationals for simplicity, we do not have an
+exponential, so we define a "softmax-like" nonlinear normalization instead.
 
 
 -/
@@ -143,7 +143,7 @@ def scan (step : σ → α → σ) (xs : Fin n → α) (initial : σ) : σ :=
 
 -- Sum is a fold
 def Vector.sum (a : Vector n) : Rat :=
-  --alternative: scan (fun a b => a + b) a 0
+  -- Alternative: scan (fun a b => a + b) a 0
   (fori (fun i => a i)).sum
 
 def softmax_like (z : Vector n) : Vector n :=
@@ -178,7 +178,7 @@ theorem Vector.mul_add
 /-!
 
 Matrices are defined similarly. We are basically just stacking
-`vmap`'s to get our core operations. Note the implementation of `matmul` in particular
+`vmap` calls to get our core operations. Note the implementation of `matmul` in particular,
 which will be the target of future proofs.
 
 -/
@@ -274,7 +274,7 @@ theorem Equivariant.prod
   exact Prod.ext (hf x.1) (hg x.2)
 
 
--- Equivariants flow through neural networks.
+-- Equivariances flow through neural networks.
 theorem neural_network_equivariant
     {Shape : Type v} {State : Shape → Type u} {source target : Shape}
     (layers : List (Layer State))
@@ -369,9 +369,9 @@ theorem neural_network_selection_equivariant
 
 
 While these properties so far seem basic, they are essential for
- designing large-scale LLMs. These properties provide the mean for parallelizing
- and optimizing these systems. They also are properties that are commonly broken when
- new low-level optimization are introduced. Let's look at a couple of these in more detail.
+designing large-scale LLMs. These properties provide the means for parallelizing
+and optimizing these systems. They also are properties that are commonly broken when
+new low-level optimizations are introduced. Let's look at a couple of these in more detail.
 
 
 ## Batch Invariance
@@ -545,6 +545,7 @@ structure PositionPermutation (n : Nat) where
 def permute (π : PositionPermutation n) (a : Fin n → α) : Fin n → α :=
   select π.index a
 
+
 def permute_both (π : PositionPermutation n) (a : Fin n → Fin n → α) :
     Fin n → Fin n → α :=
   permute π (vmap (permute π) a)
@@ -553,7 +554,7 @@ def permute_qkv {hidden : Nat} (π : PositionPermutation seq) :=
   Prod.map (Prod.map (permute (α := Vector hidden) π) (permute (α := Vector hidden) π))
     (permute (α := Vector hidden) π)
 
-
+-- Main property.
 def PermuteEquivariant (op : α → β)
     -- If permutation is applied to our input,
     (inputAction : PositionPermutation n → α → α := by exact permute)
@@ -564,7 +565,7 @@ def PermuteEquivariant (op : α → β)
        op  (source := ()) (target := ()) (inputAction π) (outputAction π)
 /-!
 
-Most of the core operations we have defined have the necessary equivariance.
+Most of the core operations we have defined have the necessary equivariance already.
 The main additional property we need is for our softmax, which follows directly from
 addition.
 
@@ -573,7 +574,7 @@ addition.
 
 -/
 
--- SelectionEquivariance (vmap) implies permutation invariance.
+-- Selection equivariance (vmap) implies permutation equivariance.
 theorem SelectionEquivariant.permute
     {op : {n : Nat} → (Fin n → α) → (Fin n → β)}
     (equivariant : SelectionEquivariant op) : PermuteEquivariant (@op n) := by
@@ -589,7 +590,7 @@ theorem vmap_permute_both (fn : (Fin n → α) → (Fin n → β))
       vmap_selection_equivariant fn π.index _
     _ = _ := congrArg (permute π) (funext (fun s => equivariant π (input s)))
 
-
+-- Prove that sum is permutation invariant.
 theorem sum_rat {xs ys : List Rat} (h : xs.Perm ys) : xs.sum = ys.sum :=
    h.foldr_eq' (fun x _ y _ z => Rat.add_left_comm y x z) 0
 
@@ -599,17 +600,13 @@ theorem permute_sum (π : PositionPermutation seq) (f : Fin seq → Rat) :
      List.map_ofFn, Function.comp_def] using
     sum_rat (π.valid.map f)
 
+-- Prove that softmax is permutation equivariant.
 theorem softmax_like_permute_equivariant :
     PermuteEquivariant (n := n) softmax_like := by
   intro π z
   funext s
   exact congrArg (fun total => (1 + relu (z (π.index s))) / total)
     ((permute_sum π) (fun t => 1 + relu (z t)))
-
-def PermutationInvariant (op : (Fin n → α) → β) : Prop :=
-  ∀ π : PositionPermutation n,
-    Invariant (Input := fun _ : Unit => Fin n → α)
-      (fun input => op input) (source := ()) (target := ()) (permute π)
 
 theorem Matrix.matmul_transpose_permute :
     PermuteEquivariant
@@ -628,6 +625,7 @@ theorem Matrix.matmul_permute :
 /-!
 
 Now we can show that the vanilla Transformer is permutation equivariant.
+
 -/
 
 theorem attention_layer_permute :
@@ -668,7 +666,7 @@ theorem transformer_permute (blocks : Params hidden) :
 
 /-!
 
-Of course in practice we add additional information that breaks this property.
+Of course, in practice, we add additional information that breaks this property.
 The simplest way is through the use of positional features. We can show that even
 simple positional features break equivariance with a direct counterexample.
 
@@ -740,7 +738,7 @@ def RegionInvariant (radius : Nat)
     (∀ t, InWindow radius s t → input t = other t ) →
       op input s = op other s
 
--- Selection equivariant (MLP layers) have radius 0
+-- Selection-equivariant operations (such as MLP layers) have radius 0.
 theorem SelectionEquivariant.region_invariant
     {op : {n : Nat} → (Fin n → α) → (Fin n → β)}
     (equivariant : SelectionEquivariant op) : RegionInvariant (seq := seq) 0 op := by
@@ -797,7 +795,7 @@ theorem neural_network_region_invariant (radius : Nat)
 
 /-!
 
-Finally we need to show the radius of SWA. We first show that our implementation of masking
+Finally, we need to show the radius of SWA. We first show that our implementation of masking
 leads to a given radius and then apply this to the sparse attention implementation.
 -/
 attribute [local simp] Rat.add_zero Rat.zero_add Rat.zero_mul Rat.mul_zero
@@ -851,7 +849,7 @@ can be computed separately to reduce memory. We define a typed tiling.
 
 -/
 
--- Split into n groups of size tiles.
+-- Select one of tiles groups, each of size n.
 def tile (n : Nat) (xs : Fin (tiles * n) → α) (c : Fin tiles) : Fin n → α :=
   -- The proof here shows that it is legal to make this slicing.
   slice (c.val * n) n (by
@@ -867,7 +865,7 @@ def tile_fold (tiles n : Nat) (step : σ → α → σ)
 
 /-!
 
-Once we have this primitive we can compute and aggregate a value for each tile.
+Once we have this primitive, we can compute and aggregate a value for each tile.
 
 ![Process equal-size key/value tiles, carry the two accumulators, and normalize once at the end.](site/diagrams/flash-attention.svg)
 
@@ -953,7 +951,7 @@ theorem tile_fold_eq (tiles n : Nat) (step : σ → α → σ)
 
 /-!
 
-The main proof is that flash attention is equivalent to our original attention.
+The main proof is that Flash attention is equivalent to our original attention.
 This is done by showing a lemma over the internal fold that we are accumulating the correct values.
 
 -/
@@ -1031,7 +1029,7 @@ theorem scan_weighted (a : Rat) (values : Vector n) (z : Rat) :
 
 
 Unlike vanilla attention, state space models clearly induce an ordering on the sequence
-in the multiplicative term `a`. However in the special case where that term is 1 and
+in the multiplicative term `a`. However, in the special case where that term is 1 and
 we use a bidirectional SSM, we can show that the permutation equivariance remains.
 
 -/
@@ -1165,14 +1163,14 @@ theorem chunkwise_ssm_layer_eq (tiles n : Nat) (a : Rat)
 
 
 This blog considered the use of Lean as a method to prove some elementary properties about Transformers and related models.
-There are many additional things one might consider here including bounding errors introduced from quantization, aggregation, backpropagation,
+There are many additional things one might consider here, including bounding errors introduced from quantization, aggregation, backpropagation,
 and training-inference mismatch. Additionally, there are likely many ways to simplify these proofs or develop libraries to make them more minimal.
 
-At a high level though, the main change is not the machinery for proving these properties, it is the ease with which a person can specify "what" they want to be
+At a high level, though, the main change is not the machinery for proving these properties; it is the ease with which a person can specify "what" they want to be
 proven and receive a certificate that a property is true. Understanding how that interface should work and how it can be used will be an extremely interesting challenge over the next year.
 
 
 -/
 
 
-end TensorPuzzles
+end Transformer

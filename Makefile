@@ -7,6 +7,8 @@ check:
 docs:
 	$(LAKE) build :literateHtml
 	# Re-render even for CSS-only edits (Verso's facet does not track extra_css).
+	# Remove stale pages after module renames; this directory is generated.
+	rm -rf .lake/build/literate-html
 	$(LAKE) exe verso-literate-html .lake/build/literate-html .lake/build/literate-module-map literate.toml
 
 serve: docs
