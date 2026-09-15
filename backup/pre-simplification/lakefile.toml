@@ -1,5 +1,0 @@
-name = "minimal-tensors"
-defaultTargets = ["Tensors"]
-
-[[lean_lib]]
-name = "Tensors"

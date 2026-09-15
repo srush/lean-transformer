@@ -35,10 +35,12 @@ These allow researchers to reason about what they can learn, and
 implementers to optimize computation while maintaining equivalence.
 Our goal will be to prove equivariances and invariances for specific architectures.
 
-Notationally, ML definitions often assume functions work on different input shapes, e.g. batch sizes.
-For this reason our Lean definition will be a bit complex to allow for functions that are polymorphic over the shape.
 
 ![Equivariance transforms the output along with the input; invariance leaves the output unchanged.](site/diagrams/equivariance-invariance.svg)
+
+Notationally, ML definitions often assume the same functions can work on different input shapes, e.g. batch sizes.
+For this reason our Lean definition will be a bit complex to allow for functions that are polymorphic over the shape.
+
 -/
 
 def Equivariant
@@ -65,11 +67,10 @@ def Invariant
 /-!
 # Vectors, Matrices, and Neural Networks
 
-To define core invariances of a Transformer, we will first
-build a simple neural network library in Lean.
+We begin by building a simple neural network library in Lean.
 
-Here is `relu` which takes in a number and returns its non-negative part.
-Along with the definition, we can prove it does what we claim.
+The `relu` function takes in a number and returns its non-negative part.
+Along with the definition, we prove it does what we claim.
 
 -/
 
@@ -86,10 +87,10 @@ theorem relu_non_negative
 /-!
 
 
-Following the style of JAX, we lift scalar functions to operate on vectors.
-We will represent vectors and tensors as higher-order functions mapping
-indices to rational numbers to make our proofs easier, since we do not care
-about efficiency.
+Following the style of [Jax](https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html), we lift scalar functions to operate on vectors.
+Vectors (and tensors) are represented as higher-order functions mapping
+indices to rational numbers. This makes our proofs easier since we do not have to care
+about storage or efficiency.
 
 -/
 
@@ -128,8 +129,8 @@ instance : Mul (Vector n) where
 /-!
 
 
-For aggregations we define a vector scan. Since we are using rationals for simplicity we do not have an
-exponential, so we use a softmax-like normalization instead.
+For aggregations we define a vector scan.  Since we are using rationals for simplicity we do not have an
+exponential, so define a "softmax-like" non-linear normalization instead.
 
 
 -/
@@ -142,7 +143,7 @@ def scan (step : σ → α → σ) (xs : Fin n → α) (initial : σ) : σ :=
 
 -- Sum is a fold
 def Vector.sum (a : Vector n) : Rat :=
-  --scan (fun a b => a + b) a 0
+  --alternative: scan (fun a b => a + b) a 0
   (fori (fun i => a i)).sum
 
 def softmax_like (z : Vector n) : Vector n :=
@@ -177,7 +178,8 @@ theorem Vector.mul_add
 /-!
 
 Matrices are defined similarly. We are basically just stacking
-`vmap`'s to get our core operations.
+`vmap`'s to get our core operations. Note the implementation of `matmul` in particular
+which will be the target of future proofs.
 
 -/
 
@@ -200,9 +202,8 @@ def Matrix.matmul (a : Matrix n m) (b : Matrix m p) : Matrix n p :=
 
 /-!
 
-This gives the full machinery to build our first neural network.
-This represents stacking layers that take and return the same shape.
-And a simple loss function.
+We now have the full machinery of deep learning.
+A neural network is just stacking layers and applying a simple loss function.
 
 -/
 
@@ -226,7 +227,7 @@ def loss (point_loss : Fin batch → Vector hidden → Rat)
 # Properties of Neural Networks
 
 Now let us return to our goal of proving network equivariances.
-The strategy here will be to first show that equivariances compose,
+Our strategy will be to first show that in general equivariances compose,
 and then show that they propagate through a neural network.
 
 -/
@@ -265,8 +266,7 @@ theorem Equivariant.prod
     (hf : Equivariant (Input := Input₁) (Output := Output₁) f T₁ S₁)
     -- and g(T2 x) = S2 g(x)
     (hg : Equivariant (Input := Input₂) (Output := Output₂) g T₂ S₂) :
-    -- Then <f,g> <T1 x, T2 y> = <S1 f(T1 x), S2 g(T2 y)>
-    -- TODO (correctness): The right side should be <S1 (f x), S2 (g y)>; do not apply T1 and T2 again.
+    -- Then <f,g> <T1 x, T2 y> = <S1 f( x), S2 g( y)>
     Equivariant (Input := fun shape => Input₁ shape × Input₂ shape)
       (Output := fun shape => Output₁ shape × Output₂ shape)
       (fun input => Prod.map f g input) (Prod.map T₁ T₂) (Prod.map S₁ S₂) := by
@@ -295,10 +295,9 @@ theorem neural_network_equivariant
       exact composed
 /-!
 
-
 We can use these properties to show that our neural network
-is selection equivariant, e.g. the result should be the same no matter
-what the batch is.
+is selection equivariant, roughly that each individual result should be the same no matter
+how batches are built or ordered.
 
 ![Selecting, reordering, and repeating positions commutes with a selection-equivariant function.](site/diagrams/selection-equivariance.svg)
 -/
@@ -330,9 +329,8 @@ theorem vmap_selection_equivariant (fn : α → β) :
 
 /-!
 
-These can now be chained together to show that the whole neural network maintains this property.
-
-![Row equivariance: swapping the rows before matmul gives the same result as swapping the output rows.](site/diagrams/row-equivariance.svg)
+From these individual results, we directly build up to our first main result.
+A simple neural network does not depend on the order or content of its batch.
 
 -/
 theorem Matrix.matmul_row_equivariant
@@ -366,16 +364,17 @@ theorem neural_network_selection_equivariant
 # System Optimization
 
 
-When designing large-scale LLMs, there are several places where these properties
-can be exploited directly for parallelism. While in our "implementation", these properties
-are simple to see, when designing low-level optimized systems you would want to prove that none of your
-optimizations break them.
+While these properties so far seem basic, they are essential for
+ designing large-scale LLMs. These properties provide the mean for parallelizing
+ and optimizing these systems. They also are properties that are commonly broken when
+ new low-level optimization are introduced. Let's look at a couple of these in more detail.
+
 
 ## Batch Invariance
 
 Batch invariance ensures that the final loss of the system is independent of the size of the batch used. This property can
 ensure replicability across systems. See [Horace He's](https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/) beautifully
-described blog about how batch invariance can be lost under different optimizations.
+described blog about why batch invariance is useful and how it is often sacrificed under different optimizations.
 
 Here we prove that selection equivariance implies a simple form of batch invariance. Basically, you get the same loss
 independent of the batch.
@@ -408,8 +407,7 @@ and then merge them.
 
 def Matrix.row_split (a : Matrix (k + k) m) :
     Matrix k m × Matrix k m :=
-  -- Note here that i ∈ {0..k} but to index row need i ∈ {0..2 k}.
-  -- TODO (correctness): These bounds are exclusive: 0 ≤ i < k, embedded into indices below 2*k.
+  -- Note here that i ∈ {0..k-1} but to index row need i ∈ {0..2 k-1}.
   -- These functions handle that cast.
   ⟨select (fun i => i.castAdd k) a,
    select (fun i => i.natAdd k) a⟩
@@ -497,7 +495,7 @@ We first define attention.
 abbrev Mixer (seq hidden : Nat) :=
   (Matrix seq hidden × Matrix seq hidden) × Matrix seq hidden → Matrix seq hidden
 
--- The famed softmax(Q K^T V) formula.
+-- The famed softmax(Q K^T) V formula.
 def base_attention (s : Matrix seq seq → Matrix seq seq) : Mixer seq hidden :=
   fun ((q,k), v) => Matrix.matmul (s (q.matmul k.transpose)) v
 
@@ -505,7 +503,7 @@ def attention_layer : Mixer seq hidden :=
   fun input => base_attention (vmap softmax_like) input
 /-!
 
-A transformer block with parameters.
+Attention is included in the main network through a parameterized Transformer block.
 
 -/
 structure TransformerBlock (hidden : Nat) where
@@ -563,10 +561,12 @@ Most of the core operations we have defined have the necessary equivariance.
 The main additional property we need is for our softmax, which follows directly from
 addition.
 
+![Row equivariance: swapping the rows before matmul gives the same result as swapping the output rows.](site/diagrams/row-equivariance.svg)
+
+
 -/
 
 -- SelectionEquivariance (vmap) implies permutation invariance.
--- TODO (terminology): This theorem concludes permutation equivariance, not invariance.
 theorem SelectionEquivariant.permute
     {op : {n : Nat} → (Fin n → α) → (Fin n → β)}
     (equivariant : SelectionEquivariant op) : PermuteEquivariant (@op n) := by
