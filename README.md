@@ -1,4 +1,4 @@
-# Lean for Transformers: Invariants
+# Lean Verified Transformers
 
 [Read the article](https://srush.github.io/lean-transformer/), or explore the
 definitions and proofs in [Transformer.lean](Transformer.lean).

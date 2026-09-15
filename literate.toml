@@ -5,11 +5,11 @@ hide_commands = ["import", "set_option", "namespace", "end"]
 show_imports = false
 
 [metadata]
-title = "Lean for Transformers: Invariants"
+title = "Lean Verified Transformers"
 description = "Rational vectors, sequence models, and verified parallelism in Lean."
 
 [[targets]]
 module = "Transformer"
 
 [modules.Transformer]
-title = "Lean for Transformers: Invariants"
+title = "Lean Verified Transformers"
